@@ -23,6 +23,7 @@ use super::LumenCommand;
 
 pub struct OperateCommand {
     pub query: String,
+    pub no_mdcat: bool,
 }
 
 pub fn extract_operate_response(ai_response: &str) -> Result<OperateResult, ExtractError> {
@@ -147,7 +148,7 @@ pub fn process_operation(result: OperateResult) -> Result<(), io::Error> {
 
 impl OperateCommand {
     pub async fn execute(&self, provider: &LumenProvider) -> Result<(), LumenError> {
-        LumenCommand::print_with_mdcat(format!("`query`: {}", &self.query))?;
+        LumenCommand::print_with_mdcat(format!("`query`: {}", &self.query), self.no_mdcat)?;
 
         let spinner_text = "Generating answer...".to_string();
 

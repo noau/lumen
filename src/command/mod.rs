@@ -32,21 +32,32 @@ pub enum CommandType {
 
 pub struct LumenCommand {
     provider: LumenProvider,
+    no_mdcat: bool,
 }
 
 impl LumenCommand {
-    pub fn new(provider: LumenProvider) -> Self {
-        LumenCommand { provider }
+    pub fn new(provider: LumenProvider, no_mdcat: bool) -> Self {
+        LumenCommand { provider, no_mdcat }
     }
 
     pub async fn execute(&self, command_type: CommandType) -> Result<(), LumenError> {
         match command_type {
             CommandType::Explain { git_entity, query } => {
-                ExplainCommand { git_entity, query }
-                    .execute(&self.provider)
-                    .await
+                ExplainCommand {
+                    git_entity,
+                    query,
+                    no_mdcat: self.no_mdcat,
+                }
+                .execute(&self.provider)
+                .await
             }
-            CommandType::List => ListCommand.execute(&self.provider).await,
+            CommandType::List => {
+                ListCommand {
+                    no_mdcat: self.no_mdcat,
+                }
+                .execute(&self.provider)
+                .await
+            }
             CommandType::Draft(context, draft_config) => {
                 let diff = Diff::from_working_tree(true)?;
                 let mut context = context;
@@ -79,7 +90,12 @@ impl LumenCommand {
                 .await
             }
             CommandType::Operate { query } => {
-                OperateCommand { query }.execute(&self.provider).await
+                OperateCommand {
+                    query,
+                    no_mdcat: self.no_mdcat,
+                }
+                .execute(&self.provider)
+                .await
             }
         }
     }
@@ -120,7 +136,12 @@ impl LumenCommand {
         Ok(sha)
     }
 
-    fn print_with_mdcat(content: String) -> Result<(), LumenError> {
+    pub fn print_with_mdcat(content: String, no_mdcat: bool) -> Result<(), LumenError> {
+        if no_mdcat {
+            println!("{}", content);
+            return Ok(());
+        }
+
         let try_mdcat = |text: &str| -> Result<(), Box<dyn std::error::Error>> {
             let mut child = std::process::Command::new("mdcat")
                 .stdin(Stdio::piped())

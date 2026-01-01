@@ -6,7 +6,9 @@ use crate::{
 
 use super::{LumenCommand, explain::ExplainCommand};
 
-pub struct ListCommand;
+pub struct ListCommand {
+    pub no_mdcat: bool,
+}
 
 impl ListCommand {
     pub async fn execute(&self, provider: &LumenProvider) -> Result<(), LumenError> {
@@ -15,6 +17,7 @@ impl ListCommand {
         ExplainCommand {
             git_entity,
             query: None,
+            no_mdcat: self.no_mdcat,
         }
         .execute(provider)
         .await

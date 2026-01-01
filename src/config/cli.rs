@@ -21,6 +21,10 @@ pub struct Cli {
     #[arg(short = 'm', long = "model")]
     pub model: Option<String>,
 
+    /// Disable mdcat for markdown rendering
+    #[arg(long, global = true)]
+    pub no_mdcat: bool,
+
     #[command(subcommand)]
     pub command: Commands,
 }
