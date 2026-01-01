@@ -1,6 +1,10 @@
 use spinoff::{Color, Spinner, spinners};
 
-use crate::{error::LumenError, git_entity::GitEntity, provider::LumenProvider};
+use crate::{
+    error::LumenError,
+    git_entity::{diff::Diff, GitEntity},
+    provider::LumenProvider,
+};
 
 use super::LumenCommand;
 
@@ -23,6 +27,13 @@ impl ExplainCommand {
 
         let mut spinner = Spinner::new(spinners::Dots, spinner_text, Color::Blue);
         let result = provider.explain(self).await?;
+
+        // Cache the result if it's a working tree diff
+        if let GitEntity::Diff(Diff::WorkingTree { diff, .. }) = &self.git_entity {
+            // We ignore cache errors to not break the flow
+            let _ = crate::cache::save_explanation(diff, &result);
+        }
+
         spinner.success("Done");
 
         LumenCommand::print_with_mdcat(result)?;

@@ -48,10 +48,32 @@ impl LumenCommand {
             }
             CommandType::List => ListCommand.execute(&self.provider).await,
             CommandType::Draft(context, draft_config) => {
+                let diff = Diff::from_working_tree(true)?;
+                let mut context = context;
+                let mut include_diff = true;
+
+                // Check for cached explanation
+                if let Diff::WorkingTree {
+                    diff: ref diff_content,
+                    ..
+                } = diff
+                {
+                    if let Some(summary) = crate::cache::get_explanation(diff_content) {
+                        let cached_context =
+                            format!("Previous explanation of these changes:\n{}", summary);
+                        context = match context {
+                            Some(c) => Some(format!("{}\n\n{}", c, cached_context)),
+                            None => Some(cached_context),
+                        };
+                        include_diff = false;
+                    }
+                }
+
                 DraftCommand {
-                    git_entity: GitEntity::Diff(Diff::from_working_tree(true)?),
+                    git_entity: GitEntity::Diff(diff),
                     draft_config,
                     context,
+                    include_diff,
                 }
                 .execute(&self.provider)
                 .await

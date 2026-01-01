@@ -123,7 +123,7 @@ impl AIPrompt {
         };
 
         let user_prompt = String::from(formatdoc! {"
-            Generate a concise git commit message written in present tense for the following code diff with the given specifications below:
+            Generate a concise git commit message written in present tense for the following {source} with the given specifications below:
 
             The output response must be in format:
             <type>(<optional scope>): <commit message>
@@ -134,12 +134,15 @@ impl AIPrompt {
             Commit message must be a maximum of 72 characters.
             Exclude anything unnecessary such as translation. Your entire response will be passed directly into git commit.
 
-            Code diff:
-            ```diff
-            {diff}
-            ```
+            {diff_section}
             ",
+            source = if command.include_diff { "code diff" } else { "changes (summarized in context)" },
             commit_types = command.draft_config.commit_types,
+            diff_section = if command.include_diff {
+                format!("Code diff:\n```diff\n{}\n```", diff)
+            } else {
+                String::new()
+            }
         });
 
         Ok(AIPrompt {

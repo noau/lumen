@@ -9,6 +9,7 @@ pub struct DraftCommand {
     pub git_entity: GitEntity,
     pub context: Option<String>,
     pub draft_config: DraftConfig,
+    pub include_diff: bool,
 }
 
 impl DraftCommand {

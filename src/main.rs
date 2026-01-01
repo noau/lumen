@@ -8,6 +8,7 @@ use std::io::Read;
 use std::process;
 
 mod ai_prompt;
+mod cache;
 mod command;
 mod commit_reference;
 mod config;
