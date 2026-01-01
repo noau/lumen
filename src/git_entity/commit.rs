@@ -27,6 +27,7 @@ impl Commit {
     /// Build a commit object from a SHA or ref.
     pub fn new(sha: String) -> Result<Self, LumenError> {
         let sha = sha.trim().to_string();
+        log::trace!("Creating new Commit object for: {}", sha);
         Self::is_valid_commit(&sha)?;
 
         Ok(Commit {
@@ -42,26 +43,32 @@ impl Commit {
     /// Validate that a SHA or ref resolves to a commit object.
     pub fn is_valid_commit(sha: &str) -> Result<(), LumenError> {
         let sha = sha.trim();
+        log::trace!("Validating commit: {}", sha);
         let output = Command::new("git").args(["cat-file", "-t", sha]).output()?;
         let output_str = String::from_utf8(output.stdout)?;
 
         if output_str.trim() == "commit" {
+            log::trace!("Commit is valid");
             return Ok(());
         }
 
+        log::warn!("Invalid commit: {}", sha);
         Err(CommitError::InvalidCommit(sha.to_string()).into())
     }
 
     /// Resolve the full commit hash for a ref.
     fn get_full_hash(sha: &str) -> Result<String, LumenError> {
+        log::trace!("Resolving full hash for: {}", sha);
         let output = Command::new("git").args(["rev-parse", sha]).output()?;
 
         let full_hash = String::from_utf8(output.stdout)?.trim_end().to_string();
+        log::trace!("Full hash: {}", full_hash);
         Ok(full_hash)
     }
 
     /// Get the commit diff content.
     fn get_diff(sha: &str) -> Result<String, LumenError> {
+        log::trace!("Getting diff for commit: {}", sha);
         let output = Command::new("git")
             .args([
                 "diff-tree",
@@ -77,14 +84,17 @@ impl Commit {
 
         let diff = String::from_utf8(output.stdout)?;
         if diff.is_empty() {
+            log::warn!("Empty diff for commit: {}", sha);
             return Err(CommitError::EmptyDiff(sha.to_string()).into());
         }
 
+        log::trace!("Diff content length: {}", diff.len());
         Ok(diff)
     }
 
     /// Get the commit message body.
     fn get_message(sha: &str) -> Result<String, LumenError> {
+        log::trace!("Getting message for commit: {}", sha);
         let output = Command::new("git")
             .args(["log", "--format=%B", "-n", "1", sha])
             .output()?;

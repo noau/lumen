@@ -27,9 +27,11 @@ impl ConfigureCommand {
     /// 3. Allows specifying a custom model name
     /// 4. Saves the configuration to `~/.config/lumen/lumen.config.json`
     pub fn execute() -> Result<(), LumenError> {
+        log::trace!("Executing ConfigureCommand interactive wizard");
         println!("\n  \x1b[1;36mLumen Configuration\x1b[0m\n");
 
         let provider = Self::select_provider()?;
+        log::trace!("Selected provider: {}", provider.display_name);
         let api_key = Self::get_api_key(provider)?;
         let model = Self::get_model_name(provider)?;
 
@@ -51,7 +53,10 @@ impl ConfigureCommand {
         let selection = Select::new("Select your default AI provider:", options)
             .with_help_message("↑↓ to move, enter to select, type to filter")
             .prompt()
-            .map_err(|e| LumenError::ConfigurationError(e.to_string()))?;
+            .map_err(|e| {
+                log::error!("Provider selection failed: {}", e);
+                LumenError::ConfigurationError(e.to_string())
+            })?;
 
         Ok(selection.0)
     }
@@ -61,6 +66,7 @@ impl ConfigureCommand {
     /// is local (e.g. Ollama).
     fn get_api_key(provider: &ProviderInfo) -> Result<Option<String>, LumenError> {
         if provider.env_key.is_empty() {
+            log::trace!("Provider {} does not require an API key", provider.display_name);
             println!("\n  \x1b[2mOllama runs locally — no API key needed.\x1b[0m");
             return Ok(None);
         }
@@ -72,11 +78,16 @@ impl ConfigureCommand {
 
         let api_key = Text::new(&prompt)
             .prompt()
-            .map_err(|e| LumenError::ConfigurationError(e.to_string()))?;
+            .map_err(|e| {
+                log::error!("API key input failed: {}", e);
+                LumenError::ConfigurationError(e.to_string())
+            })?;
 
         if api_key.is_empty() {
+            log::trace!("User left API key empty, will use environment variable");
             Ok(None)
         } else {
+            log::trace!("User provided an API key");
             Ok(Some(api_key))
         }
     }
@@ -92,20 +103,27 @@ impl ConfigureCommand {
         let model = Text::new(&prompt)
             .with_help_message("Press Enter to use the default model")
             .prompt()
-            .map_err(|e| LumenError::ConfigurationError(e.to_string()))?;
+            .map_err(|e| {
+                log::error!("Model name input failed: {}", e);
+                LumenError::ConfigurationError(e.to_string())
+            })?;
 
         if model.is_empty() {
+            log::trace!("Using default model: {}", provider.default_model);
             Ok(None)
         } else {
+            log::trace!("User specified custom model: {}", model);
             Ok(Some(model))
         }
     }
 
     /// Resolves the path to the configuration directory (`~/.config/lumen`).
     fn get_config_path() -> Result<std::path::PathBuf, LumenError> {
-        let mut path = home_dir().ok_or_else(|| {
+        let path = home_dir().ok_or_else(|| {
+            log::error!("Could not determine home directory");
             LumenError::ConfigurationError("Could not determine home directory".to_string())
         })?;
+        let mut path = path;
         path.push(".config");
         path.push("lumen");
         Ok(path)
@@ -120,14 +138,20 @@ impl ConfigureCommand {
         model: Option<&str>,
     ) -> Result<(), LumenError> {
         let config_dir = Self::get_config_path()?;
+        log::trace!("Creating config directory: {:?}", config_dir);
         fs::create_dir_all(&config_dir)?;
 
         let config_file = config_dir.join("lumen.config.json");
 
         let mut config: Value = if config_file.exists() {
+            log::trace!("Updating existing config file: {:?}", config_file);
             let content = fs::read_to_string(&config_file)?;
-            serde_json::from_str(&content).unwrap_or_else(|_| json!({}))
+            serde_json::from_str(&content).unwrap_or_else(|e| {
+                log::warn!("Failed to parse existing config, starting fresh: {}", e);
+                json!({})
+            })
         } else {
+            log::trace!("Creating new config file: {:?}", config_file);
             json!({})
         };
 
@@ -147,6 +171,7 @@ impl ConfigureCommand {
 
         let content = serde_json::to_string_pretty(&config)?;
         fs::write(&config_file, content)?;
+        log::trace!("Configuration written successfully");
 
         Ok(())
     }

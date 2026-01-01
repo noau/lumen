@@ -25,6 +25,14 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub no_mdcat: bool,
 
+    /// Enable verbose logging
+    #[arg(short, long, global = true)]
+    pub verbose: bool,
+
+    /// Log output target (defaults to stdout)
+    #[arg(long, global = true)]
+    pub log_target: Option<String>,
+
     #[command(subcommand)]
     pub command: Commands,
 }

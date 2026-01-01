@@ -92,12 +92,14 @@ pub fn extract_operate_response(ai_response: &str) -> Result<OperateResult, Extr
 }
 
 pub fn process_operation(result: OperateResult) -> Result<(), io::Error> {
+    log::trace!("Processing operation command: {}", result.command);
     // Display the explanation
     println!("\n--- What this will do ---");
     println!("{}", result.explanation);
 
     // Display warnings if any and prompt for confirmation
     if let Some(warning) = result.warning {
+        log::warn!("AI provided warning for operation: {}", warning);
         // print warning in yellow colour
         println!("\n\x1b[33mWarning: {}\x1b[0m", warning);
     }
@@ -110,10 +112,12 @@ pub fn process_operation(result: OperateResult) -> Result<(), io::Error> {
     println!();
 
     if !input.trim().eq_ignore_ascii_case("y") {
+        log::trace!("Operation canceled by user");
         println!("Operation canceled.");
         return Ok(());
     }
 
+    log::trace!("Executing command: {}", result.command);
     // Using a shell to execute the git command
     #[cfg(target_family = "unix")]
     let output = std::process::Command::new("sh")
@@ -129,18 +133,23 @@ pub fn process_operation(result: OperateResult) -> Result<(), io::Error> {
 
     // Print command output
     if !output.stdout.is_empty() {
+        log::trace!("Command stdout length: {}", output.stdout.len());
         io::stdout().write_all(&output.stdout)?;
     }
 
     if !output.stderr.is_empty() {
+        log::trace!("Command stderr length: {}", output.stderr.len());
         io::stderr().write_all(&output.stderr)?;
     }
 
     if !output.status.success() {
+        log::error!("Command failed with status: {:?}", output.status);
         eprintln!(
             "\nCommand failed with exit code: {:?}",
             output.status.code()
         );
+    } else {
+        log::trace!("Command executed successfully");
     }
 
     Ok(())
@@ -148,14 +157,19 @@ pub fn process_operation(result: OperateResult) -> Result<(), io::Error> {
 
 impl OperateCommand {
     pub async fn execute(&self, provider: &LumenProvider) -> Result<(), LumenError> {
+        log::trace!("Executing OperateCommand with query: {}", self.query);
         LumenCommand::print_with_mdcat(format!("`query`: {}", &self.query), self.no_mdcat)?;
 
         let spinner_text = "Generating answer...".to_string();
 
         let mut spinner = Spinner::new(spinners::Dots, spinner_text, Color::Blue);
         let result = provider.operate(self).await?;
+        log::trace!("Received AI response for operate");
         let operate_result = extract_operate_response(&result)
-            .map_err(|e| LumenError::CommandError(e.to_string()))?;
+            .map_err(|e| {
+                log::error!("Failed to extract operate response: {}", e);
+                LumenError::CommandError(e.to_string())
+            })?;
         spinner.success("Done");
 
         process_operation(operate_result)?;

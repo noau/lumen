@@ -16,11 +16,13 @@ pub struct ExplainCommand {
 
 impl ExplainCommand {
     pub async fn execute(&self, provider: &LumenProvider) -> Result<(), LumenError> {
+        log::trace!("Executing ExplainCommand");
         LumenCommand::print_with_mdcat(
             self.git_entity.format_static_details(provider),
             self.no_mdcat,
         )?;
         if let Some(query) = &self.query {
+            log::trace!("Custom query provided: {}", query);
             LumenCommand::print_with_mdcat(format!("`query`: {query}"), self.no_mdcat)?;
         }
 
@@ -34,6 +36,7 @@ impl ExplainCommand {
 
         // Cache the result if it's a working tree diff
         if let GitEntity::Diff(Diff::WorkingTree { diff, .. }) = &self.git_entity {
+            log::trace!("Caching explanation for working tree diff");
             // We ignore cache errors to not break the flow
             let _ = crate::cache::save_explanation(diff, &result);
         }

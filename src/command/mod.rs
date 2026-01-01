@@ -43,6 +43,7 @@ impl LumenCommand {
     pub async fn execute(&self, command_type: CommandType) -> Result<(), LumenError> {
         match command_type {
             CommandType::Explain { git_entity, query } => {
+                log::trace!("Dispatching Explain command");
                 ExplainCommand {
                     git_entity,
                     query,
@@ -52,6 +53,7 @@ impl LumenCommand {
                 .await
             }
             CommandType::List => {
+                log::trace!("Dispatching List command");
                 ListCommand {
                     no_mdcat: self.no_mdcat,
                 }
@@ -59,6 +61,7 @@ impl LumenCommand {
                 .await
             }
             CommandType::Draft(context, draft_config) => {
+                log::trace!("Dispatching Draft command");
                 let diff = Diff::from_working_tree(true)?;
                 let mut context = context;
                 let mut include_diff = true;
@@ -70,6 +73,7 @@ impl LumenCommand {
                 } = diff
                 {
                     if let Some(summary) = crate::cache::get_explanation(diff_content) {
+                        log::trace!("Found cached explanation for draft context");
                         let cached_context =
                             format!("Previous explanation of these changes:\n{}", summary);
                         context = match context {
@@ -90,6 +94,7 @@ impl LumenCommand {
                 .await
             }
             CommandType::Operate { query } => {
+                log::trace!("Dispatching Operate command");
                 OperateCommand {
                     query,
                     no_mdcat: self.no_mdcat,
@@ -103,6 +108,7 @@ impl LumenCommand {
     fn get_sha_from_fzf() -> Result<String, LumenError> {
         let command = "git log --color=always --format='%C(auto)%h%d %s %C(black)%C(bold)%cr' | fzf --ansi --reverse --bind='enter:become(echo {1})'";
 
+        log::trace!("Executing fzf command: {}", command);
         let output = std::process::Command::new("sh")
             .arg("-c")
             .arg(command)
@@ -114,6 +120,7 @@ impl LumenCommand {
         if !output.status.success() {
             let mut stderr = String::from_utf8(output.stderr)?;
             stderr.pop();
+            log::error!("fzf command failed: {}", stderr);
 
             let hint = match &stderr {
                 stderr if stderr.contains("fzf: command not found") => {
@@ -132,17 +139,20 @@ impl LumenCommand {
 
         let mut sha = String::from_utf8(output.stdout)?;
         sha.pop(); // remove trailing newline from echo
+        log::trace!("Selected SHA from fzf: {}", sha);
 
         Ok(sha)
     }
 
     pub fn print_with_mdcat(content: String, no_mdcat: bool) -> Result<(), LumenError> {
         if no_mdcat {
+            log::trace!("mdcat disabled by flag, printing raw content");
             println!("{}", content);
             return Ok(());
         }
 
         let try_mdcat = |text: &str| -> Result<(), Box<dyn std::error::Error>> {
+            log::trace!("Attempting to render with mdcat");
             let mut child = std::process::Command::new("mdcat")
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
@@ -155,14 +165,17 @@ impl LumenCommand {
 
             let output = child.wait_with_output()?;
             if output.status.success() {
+                log::trace!("mdcat rendered successfully");
                 println!("{}", String::from_utf8(output.stdout)?);
                 Ok(())
             } else {
+                log::warn!("mdcat failed with status: {:?}", output.status);
                 Err("mdcat failed".into())
             }
         };
 
         if try_mdcat(&content).is_err() {
+            log::trace!("Falling back to raw println");
             println!("{}", content);
         }
         Ok(())

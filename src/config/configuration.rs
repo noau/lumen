@@ -105,17 +105,27 @@ fn default_config_path() -> Option<String> {
 impl LumenConfig {
     pub fn build(cli: &Cli) -> Result<Self, LumenError> {
         let config = if let Some(config_path) = &cli.config {
+            log::trace!("Loading configuration from CLI provided path: {}", config_path);
             LumenConfig::from_file(config_path)?
         } else {
             match default_config_path() {
-                Some(path) => LumenConfig::from_file(&path)?,
-                None => LumenConfig::default(),
+                Some(path) => {
+                    log::trace!("Loading configuration from default path: {}", path);
+                    LumenConfig::from_file(&path)?
+                }
+                None => {
+                    log::trace!("No configuration file found, using defaults");
+                    LumenConfig::default()
+                }
             }
         };
 
         let provider = cli.provider.as_ref().cloned().unwrap_or(config.provider);
         let api_key = cli.api_key.clone().or(config.api_key);
         let model = cli.model.clone().or(config.model);
+
+        log::trace!("Effective provider: {:?}", provider);
+        log::trace!("Effective model: {:?}", model);
 
         Ok(LumenConfig {
             provider,
@@ -126,13 +136,20 @@ impl LumenConfig {
     }
 
     pub fn from_file(file_path: &str) -> Result<Self, LumenError> {
+        log::trace!("Opening config file: {}", file_path);
         let file = File::open(file_path)?;
         let reader = BufReader::new(file);
 
         // Deserialize JSON data into the LumenConfig struct
         let config: LumenConfig = match from_reader(reader) {
-            Ok(config) => config,
-            Err(e) => return Err(LumenError::InvalidConfiguration(e.to_string())),
+            Ok(config) => {
+                log::trace!("Successfully parsed config file");
+                config
+            }
+            Err(e) => {
+                log::error!("Failed to parse config file: {}", e);
+                return Err(LumenError::InvalidConfiguration(e.to_string()));
+            }
         };
 
         Ok(config)

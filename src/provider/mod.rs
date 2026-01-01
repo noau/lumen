@@ -47,10 +47,12 @@ impl LumenProvider {
         api_key: Option<String>,
         model: Option<String>,
     ) -> Result<Self, LumenError> {
+        log::trace!("Initializing provider: {:?}", provider_type);
         let (backend, provider_name) = match provider_type {
             // Custom endpoint providers (OpenRouter, Vercel) - use ServiceTargetResolver
             ProviderType::Openrouter | ProviderType::Vercel => {
                 let defaults = ProviderInfo::for_provider(provider_type);
+                log::trace!("Using custom provider configuration for {}", defaults.display_name);
                 let config = match provider_type {
                     ProviderType::Openrouter => CustomProviderConfig {
                         endpoint: "https://openrouter.ai/api/v1/",
@@ -68,10 +70,12 @@ impl LumenProvider {
 
                 let model = model.unwrap_or_else(|| defaults.default_model.to_string());
                 let model_for_resolver = model.clone();
+                log::trace!("Model: {}", model);
 
                 // Get API key from CLI/config or environment
                 let auth_env_key = config.env_key;
                 if let Some(key) = api_key {
+                    log::trace!("Setting API key in environment variable: {}", auth_env_key);
                     // TODO: Audit that the environment access only happens in single-threaded code.
                     unsafe { std::env::set_var(auth_env_key, key) };
                 }
@@ -107,10 +111,12 @@ impl LumenProvider {
                 let defaults = ProviderInfo::for_provider(provider_type);
 
                 let model = model.unwrap_or_else(|| defaults.default_model.to_string());
+                log::trace!("Model: {}", model);
 
                 // If api_key provided via CLI/config, set it in env so genai picks it up
                 if let Some(key) = api_key {
                     if !defaults.env_key.is_empty() {
+                        log::trace!("Setting API key in environment variable: {}", defaults.env_key);
                         // TODO: Audit that the environment access only happens in single-threaded code.
                         unsafe { std::env::set_var(defaults.env_key, key) };
                     }
@@ -135,33 +141,55 @@ impl LumenProvider {
     async fn complete(&self, prompt: AIPrompt) -> Result<String, ProviderError> {
         match &self.backend {
             ProviderBackend::GenAI { client, model } => {
+                log::trace!("Requesting completion from model: {}", model);
                 let chat_req = ChatRequest::new(vec![
                     ChatMessage::system(prompt.system_prompt),
                     ChatMessage::user(prompt.user_prompt),
                 ]);
 
-                let response = client.exec_chat(model, chat_req, None).await?;
+                let response = client.exec_chat(model, chat_req, None).await.map_err(|e| {
+                    log::error!("AI request failed: {}", e);
+                    ProviderError::from(e)
+                })?;
 
                 response
                     .first_text()
-                    .map(|s| s.to_string())
-                    .ok_or(ProviderError::NoCompletionChoice)
+                    .map(|s| {
+                        log::trace!("Received response of length: {}", s.len());
+                        s.to_string()
+                    })
+                    .ok_or_else(|| {
+                        log::error!("No completion content in response");
+                        ProviderError::NoCompletionChoice
+                    })
             }
         }
     }
 
     pub async fn explain(&self, command: &ExplainCommand) -> Result<String, ProviderError> {
-        let prompt = AIPrompt::build_explain_prompt(command)?;
+        log::trace!("Building explain prompt");
+        let prompt = AIPrompt::build_explain_prompt(command).map_err(|e| {
+            log::error!("Failed to build explain prompt: {}", e);
+            ProviderError::from(e)
+        })?;
         self.complete(prompt).await
     }
 
     pub async fn draft(&self, command: &DraftCommand) -> Result<String, ProviderError> {
-        let prompt = AIPrompt::build_draft_prompt(command)?;
+        log::trace!("Building draft prompt");
+        let prompt = AIPrompt::build_draft_prompt(command).map_err(|e| {
+            log::error!("Failed to build draft prompt: {}", e);
+            ProviderError::from(e)
+        })?;
         self.complete(prompt).await
     }
 
     pub async fn operate(&self, command: &OperateCommand) -> Result<String, ProviderError> {
-        let prompt = AIPrompt::build_operate_prompt(command.query.as_str())?;
+        log::trace!("Building operate prompt for query: {}", command.query);
+        let prompt = AIPrompt::build_operate_prompt(command.query.as_str()).map_err(|e| {
+            log::error!("Failed to build operate prompt: {}", e);
+            ProviderError::from(e)
+        })?;
         self.complete(prompt).await
     }
 

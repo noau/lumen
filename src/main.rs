@@ -3,6 +3,8 @@ use commit_reference::CommitReference;
 use config::LumenConfig;
 use config::cli::{Cli, Commands};
 use error::LumenError;
+use env_logger::{Builder, Target};
+use log::LevelFilter;
 use git_entity::{GitEntity, commit::Commit, diff::Diff};
 use std::io::Read;
 use std::process;
@@ -27,12 +29,32 @@ async fn main() {
 async fn run() -> Result<(), LumenError> {
     let cli = Cli::parse();
 
+    let mut builder = Builder::from_default_env();
+    if let Some(log_path) = &cli.log_target {
+        let target = std::fs::File::create(log_path)?;
+        builder.target(Target::Pipe(Box::new(target)));
+    } else {
+        builder.target(Target::Stdout);
+    }
+
+    if cli.verbose {
+        builder.filter(None, LevelFilter::Trace);
+    } else if std::env::var("RUST_LOG").is_err() {
+        builder.filter(None, LevelFilter::Warn);
+    }
+
+    builder.init();
+    log::trace!("Logger initialized");
+
     let config = match LumenConfig::build(&cli) {
         Ok(config) => config,
         Err(e) => return Err(e),
     };
+    log::trace!("Configuration loaded");
 
     let provider = provider::LumenProvider::new(config.provider, config.api_key, config.model)?;
+    log::trace!("Provider initialized");
+
     let command = command::LumenCommand::new(provider, cli.no_mdcat);
 
     match cli.command {
@@ -41,6 +63,7 @@ async fn run() -> Result<(), LumenError> {
             staged,
             query,
         } => {
+            log::trace!("Executing Explain command");
             let git_entity = match reference {
                 Some(CommitReference::Single(input)) => {
                     let sha = if input == "-" {
@@ -66,18 +89,24 @@ async fn run() -> Result<(), LumenError> {
                 .execute(command::CommandType::Explain { git_entity, query })
                 .await?;
         }
-        Commands::List => command.execute(command::CommandType::List).await?,
+        Commands::List => {
+            log::trace!("Executing List command");
+            command.execute(command::CommandType::List).await?
+        },
         Commands::Draft { context } => {
+            log::trace!("Executing Draft command");
             command
                 .execute(command::CommandType::Draft(context, config.draft))
                 .await?
         }
         Commands::Operate { query } => {
+            log::trace!("Executing Operate command");
             command
                 .execute(command::CommandType::Operate { query })
                 .await?;
         }
         Commands::Configure => {
+            log::trace!("Executing Configure command");
             command::configure::ConfigureCommand::execute()?;
         }
     }
