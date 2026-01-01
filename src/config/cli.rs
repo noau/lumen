@@ -99,5 +99,9 @@ pub enum Commands {
         query: String,
     },
     /// Interactively configure Lumen (provider, API key)
-    Configure,
+    Configure {
+        /// Show current configuration
+        #[arg(short, long)]
+        show: bool,
+    },
 }

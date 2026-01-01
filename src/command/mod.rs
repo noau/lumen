@@ -1,8 +1,8 @@
-use std::io::Write;
 use draft::DraftCommand;
 use explain::ExplainCommand;
 use list::ListCommand;
 use operate::OperateCommand;
+use std::io::Write;
 use std::process::Stdio;
 
 use crate::config::configuration::DraftConfig;

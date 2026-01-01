@@ -32,12 +32,12 @@ fn calculate_diff_hash(diff: &str) -> Result<String, LumenError> {
     let output = child.wait_with_output()?;
 
     if !output.status.success() {
-        return Err(LumenError::CommandError("git hash-object failed".to_string()));
+        return Err(LumenError::CommandError(
+            "git hash-object failed".to_string(),
+        ));
     }
 
-    let hash = String::from_utf8(output.stdout)?
-        .trim()
-        .to_string();
+    let hash = String::from_utf8(output.stdout)?.trim().to_string();
 
     Ok(hash)
 }
@@ -51,11 +51,10 @@ pub fn save_explanation(diff: &str, summary: &str) -> Result<(), LumenError> {
         summary: summary.to_string(),
     };
 
-    let path = get_cache_file_path()
-        .ok_or_else(|| {
-            log::error!("Could not determine cache directory");
-            LumenError::ConfigurationError("Could not determine cache directory".to_string())
-        })?;
+    let path = get_cache_file_path().ok_or_else(|| {
+        log::error!("Could not determine cache directory");
+        LumenError::ConfigurationError("Could not determine cache directory".to_string())
+    })?;
 
     if let Some(parent) = path.parent() {
         if !parent.exists() {
@@ -89,7 +88,11 @@ pub fn get_explanation(diff: &str) -> Option<String> {
         log::trace!("Cache hit! Found matching explanation");
         Some(entry.summary)
     } else {
-        log::trace!("Cache miss: hash mismatch (cached: {}, current: {})", entry.diff_hash, current_hash);
+        log::trace!(
+            "Cache miss: hash mismatch (cached: {}, current: {})",
+            entry.diff_hash,
+            current_hash
+        );
         None
     }
 }

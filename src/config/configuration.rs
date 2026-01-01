@@ -105,7 +105,10 @@ fn default_config_path() -> Option<String> {
 impl LumenConfig {
     pub fn build(cli: &Cli) -> Result<Self, LumenError> {
         let config = if let Some(config_path) = &cli.config {
-            log::trace!("Loading configuration from CLI provided path: {}", config_path);
+            log::trace!(
+                "Loading configuration from CLI provided path: {}",
+                config_path
+            );
             LumenConfig::from_file(config_path)?
         } else {
             match default_config_path() {

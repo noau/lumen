@@ -2,10 +2,10 @@ use clap::Parser;
 use commit_reference::CommitReference;
 use config::LumenConfig;
 use config::cli::{Cli, Commands};
-use error::LumenError;
 use env_logger::{Builder, Target};
-use log::LevelFilter;
+use error::LumenError;
 use git_entity::{GitEntity, commit::Commit, diff::Diff};
+use log::LevelFilter;
 use std::io::Read;
 use std::process;
 
@@ -52,7 +52,11 @@ async fn run() -> Result<(), LumenError> {
     };
     log::trace!("Configuration loaded");
 
-    let provider = provider::LumenProvider::new(config.provider, config.api_key, config.model)?;
+    let provider = provider::LumenProvider::new(
+        config.provider,
+        config.api_key.clone(),
+        config.model.clone(),
+    )?;
     log::trace!("Provider initialized");
 
     let command = command::LumenCommand::new(provider, cli.no_mdcat);
@@ -92,7 +96,7 @@ async fn run() -> Result<(), LumenError> {
         Commands::List => {
             log::trace!("Executing List command");
             command.execute(command::CommandType::List).await?
-        },
+        }
         Commands::Draft { context } => {
             log::trace!("Executing Draft command");
             command
@@ -105,9 +109,9 @@ async fn run() -> Result<(), LumenError> {
                 .execute(command::CommandType::Operate { query })
                 .await?;
         }
-        Commands::Configure => {
-            log::trace!("Executing Configure command");
-            command::configure::ConfigureCommand::execute()?;
+        Commands::Configure { show } => {
+            log::trace!("Executing Configure command (show: {})", show);
+            command::configure::ConfigureCommand::execute(config, show)?;
         }
     }
 

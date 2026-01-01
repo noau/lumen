@@ -2,7 +2,7 @@ use spinoff::{Color, Spinner, spinners};
 
 use crate::{
     error::LumenError,
-    git_entity::{diff::Diff, GitEntity},
+    git_entity::{GitEntity, diff::Diff},
     provider::LumenProvider,
 };
 

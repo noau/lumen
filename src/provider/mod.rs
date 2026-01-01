@@ -52,7 +52,10 @@ impl LumenProvider {
             // Custom endpoint providers (OpenRouter, Vercel) - use ServiceTargetResolver
             ProviderType::Openrouter | ProviderType::Vercel => {
                 let defaults = ProviderInfo::for_provider(provider_type);
-                log::trace!("Using custom provider configuration for {}", defaults.display_name);
+                log::trace!(
+                    "Using custom provider configuration for {}",
+                    defaults.display_name
+                );
                 let config = match provider_type {
                     ProviderType::Openrouter => CustomProviderConfig {
                         endpoint: "https://openrouter.ai/api/v1/",
@@ -116,7 +119,10 @@ impl LumenProvider {
                 // If api_key provided via CLI/config, set it in env so genai picks it up
                 if let Some(key) = api_key {
                     if !defaults.env_key.is_empty() {
-                        log::trace!("Setting API key in environment variable: {}", defaults.env_key);
+                        log::trace!(
+                            "Setting API key in environment variable: {}",
+                            defaults.env_key
+                        );
                         // TODO: Audit that the environment access only happens in single-threaded code.
                         unsafe { std::env::set_var(defaults.env_key, key) };
                     }

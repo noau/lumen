@@ -1,4 +1,4 @@
-use crate::config::{ALL_PROVIDERS, ProviderInfo};
+use crate::config::{ALL_PROVIDERS, LumenConfig, ProviderInfo};
 use crate::error::LumenError;
 use dirs::home_dir;
 use inquire::{Select, Text};
@@ -19,14 +19,17 @@ impl fmt::Display for ProviderChoice {
 pub struct ConfigureCommand;
 
 impl ConfigureCommand {
-    /// Executes the interactive configuration wizard.
+    /// Executes the configuration command.
     ///
-    /// This process:
-    /// 1. Prompts the user to select an AI provider
-    /// 2. Asks for an API key (if needed)
-    /// 3. Allows specifying a custom model name
-    /// 4. Saves the configuration to `~/.config/lumen/lumen.config.json`
-    pub fn execute() -> Result<(), LumenError> {
+    /// If `show` is true, prints the current configuration.
+    /// Otherwise, starts the interactive configuration wizard.
+    pub fn execute(config: LumenConfig, show: bool) -> Result<(), LumenError> {
+        if show {
+            log::trace!("Showing current configuration");
+            Self::show_config(config);
+            return Ok(());
+        }
+
         log::trace!("Executing ConfigureCommand interactive wizard");
         println!("\n  \x1b[1;36mLumen Configuration\x1b[0m\n");
 
@@ -44,6 +47,28 @@ impl ConfigureCommand {
         );
 
         Ok(())
+    }
+
+    /// Displays the current configuration with a masked API key.
+    fn show_config(config: LumenConfig) {
+        println!("\n  \x1b[1;36mCurrent Lumen Configuration\x1b[0m\n");
+        println!("  Provider:            {:?}", config.provider);
+        println!(
+            "  Model:               {}",
+            config.model.as_deref().unwrap_or("default")
+        );
+
+        let masked_key = config
+            .api_key
+            .map(|key| {
+                let prefix_len = std::cmp::min(key.len() - 3, 5);
+                format!("{}*****", &key[..prefix_len])
+            })
+            .unwrap_or_else(|| "not set".to_string());
+
+        println!("  API Key:             {}", masked_key);
+        println!("  Draft Commit Types:  {}", config.draft.commit_types);
+        println!();
     }
 
     /// Prompts the user to select an AI provider from the supported list.
@@ -66,7 +91,10 @@ impl ConfigureCommand {
     /// is local (e.g. Ollama).
     fn get_api_key(provider: &ProviderInfo) -> Result<Option<String>, LumenError> {
         if provider.env_key.is_empty() {
-            log::trace!("Provider {} does not require an API key", provider.display_name);
+            log::trace!(
+                "Provider {} does not require an API key",
+                provider.display_name
+            );
             println!("\n  \x1b[2mOllama runs locally — no API key needed.\x1b[0m");
             return Ok(None);
         }
@@ -76,12 +104,10 @@ impl ConfigureCommand {
             provider.env_key
         );
 
-        let api_key = Text::new(&prompt)
-            .prompt()
-            .map_err(|e| {
-                log::error!("API key input failed: {}", e);
-                LumenError::ConfigurationError(e.to_string())
-            })?;
+        let api_key = Text::new(&prompt).prompt().map_err(|e| {
+            log::error!("API key input failed: {}", e);
+            LumenError::ConfigurationError(e.to_string())
+        })?;
 
         if api_key.is_empty() {
             log::trace!("User left API key empty, will use environment variable");

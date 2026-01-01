@@ -165,11 +165,10 @@ impl OperateCommand {
         let mut spinner = Spinner::new(spinners::Dots, spinner_text, Color::Blue);
         let result = provider.operate(self).await?;
         log::trace!("Received AI response for operate");
-        let operate_result = extract_operate_response(&result)
-            .map_err(|e| {
-                log::error!("Failed to extract operate response: {}", e);
-                LumenError::CommandError(e.to_string())
-            })?;
+        let operate_result = extract_operate_response(&result).map_err(|e| {
+            log::error!("Failed to extract operate response: {}", e);
+            LumenError::CommandError(e.to_string())
+        })?;
         spinner.success("Done");
 
         process_operation(operate_result)?;
