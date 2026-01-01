@@ -86,20 +86,6 @@ pub enum Commands {
         #[arg()]
         query: String,
     },
-    /// Launch interactive side-by-side diff viewer
-    Diff {
-        /// Commit reference: SHA, HEAD, HEAD~3..HEAD, main..feature, main...feature
-        #[arg(value_parser = clap::value_parser!(CommitReference))]
-        reference: Option<CommitReference>,
-
-        /// Filter to specific files
-        #[arg(short, long)]
-        file: Option<Vec<String>>,
-
-        /// Watch for file changes and auto-reload
-        #[arg(short, long)]
-        watch: bool,
-    },
     /// Interactively configure Lumen (provider, API key)
     Configure,
 }
