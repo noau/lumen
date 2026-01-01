@@ -1,12 +1,17 @@
 # <p align="center"><img src="https://github.com/user-attachments/assets/896f9239-134a-4428-9bb5-50ea59cdb5c3" alt="lumen" /></p>
 
-[![Crates.io Total Downloads](https://img.shields.io/crates/d/lumen?label=downloads%20%40crates.io)](https://crates.io/crates/lumen)
-[![GitHub Releases](https://img.shields.io/github/downloads/jnsahaj/lumen/total?label=dowloads%20%40releases)](https://github.com/jnsahaj/lumen/releases)
-![GitHub License](https://img.shields.io/github/license/jnsahaj/lumen)
-![Crates.io Size](https://img.shields.io/crates/size/lumen)
+> [!IMPORTANT]
+> This repository is a customized fork of the original [jnsahaj/lumen](https://github.com/jnsahaj/lumen). 
+> 
+> **Key Modifications:**
+> - **Removed TUI Diff Viewer:** The interactive `diff` subcommand and its heavy dependencies (ratatui, etc.) have been removed for a leaner CLI experience.
+> - **AI Explanation Caching:** Added a caching layer in `src/cache.rs` that stores AI-generated explanations for diffs, reducing API costs and providing better context for commit messages.
+> - **Enhanced Configuration:** Added support for `.lumenignore` files, verbose logging (`--verbose`), and the ability to view configuration via `lumen configure --show`.
+> - **Modernized:** Upgraded to Rust Edition 2024.
+> 
+> **Note:** These modifications, including the updates to this documentation, were implemented by AI using the `gemini-cli` agent.
 
-A command-line tool that uses AI to streamline your git workflow - generate commit messages, view diff and explain changes.
-![CleanShot 2025-12-30 at 02 47 04](https://github.com/user-attachments/assets/21e9d32a-de8a-40b2-b79b-3e87c9cbb9eb)
+A command-line tool that uses AI to streamline your git workflow - generate commit messages and explain changes.
 
 ## Table of Contents
 - [Features](#features-)
@@ -15,7 +20,6 @@ A command-line tool that uses AI to streamline your git workflow - generate comm
   - [Installation](#installation)
   - [Configuration (for AI features)](#configuration-for-ai-features)
 - [Usage](#usage-)
-  - [Visual Diff Viewer](#visual-diff-viewer)
   - [Generate Commit Messages](#generate-commit-messages)
   - [Generate Git Commands](#generate-git-commands)
   - [Explain Changes](#explain-changes)
@@ -25,17 +29,18 @@ A command-line tool that uses AI to streamline your git workflow - generate comm
 - [Advanced Configuration](#advanced-configuration-)
   - [Configuration File](#configuration-file)
   - [Configuration Precedence](#configuration-precedence)
+- [Attribution](#attribution)
 
 ## Features 🔅
 
-- **Beautiful & Ergonomic Diff Viewer**: Review your code with minimal effort
 - **Smart Commit Messages**: Generate conventional commit messages for your staged changes
+- **Explanation Caching**: Automatically caches AI explanations for diffs, reducing API costs and providing better context
 - **Git History Insights**: Understand what changed in any commit, branch, or your current work
 - **Interactive Search**: Find and explore commits using fuzzy search
 - **Change Analysis**: Ask questions about specific changes and their impact
-- **Multiple AI Providers**: Supports OpenAI, Claude, Groq, Ollama, and more
-- **Flexible**: Works with any git workflow and supports multiple AI providers
-- **Rich Output**: Markdown support for readable explanations and diffs (requires: mdcat)
+- **Multiple AI Providers**: Supports OpenAI, Claude, Gemini, Groq, Ollama, and more
+- **Highly Configurable**: Supports `.lumenignore` for custom file exclusions and verbose logging for debugging
+- **Rich Output**: Markdown support for readable explanations (optional: mdcat)
 
 ## Getting Started 🔅
 
@@ -47,18 +52,14 @@ Before you begin, ensure you have:
 
 ### Installation
 
-#### Using Homebrew (MacOS and Linux)
-```bash
-brew install jnsahaj/lumen/lumen
-```
+Ensure you have the latest [Rust toolchain](https://rustup.rs) installed.
 
-#### Using Cargo
-> [!IMPORTANT]
-> `cargo` is a package manager for `rust`,
-> and is installed automatically when you install `rust`.
-> See [installation guide](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-```bash
-cargo install lumen
+``` shell
+- 1. Clone the repo
+git clone https://github.com/noau/lumen.git
+cd lumen
+- 2. Build and install
+cargo install --path .
 ```
 
 ### Configuration (for AI features)
@@ -69,6 +70,12 @@ If you want to use AI-powered features (`explain`, `draft`, `list`, `operate`), 
 lumen configure
 ```
 
+You can also view your current configuration (with masked API keys) using:
+
+```bash
+lumen configure --show
+```
+
 This will guide you through:
 1. Selecting an AI provider
 2. Entering your API key (optional if using environment variable)
@@ -76,15 +83,12 @@ This will guide you through:
 
 The configuration is saved to `~/.config/lumen/lumen.config.json`.
 
-> [!NOTE]
-> The `diff` command works without any configuration - it's a standalone visual diff viewer.
-
 
 ## Usage 🔅
 
 ### Generate Commit Messages
 
-Create meaningful commit messages for your staged changes:
+Create meaningful commit messages for your staged changes. Lumen uses cached explanations for faster generation and better context:
 
 ```bash
 # Basic usage - generates a commit message based on staged changes
@@ -108,39 +112,9 @@ lumen operate "squash the last 3 commits into 1 with the message 'squashed commi
 
 The command will display an explanation of what the generated command does, show any warnings for potentially dangerous operations, and prompt for confirmation before execution.
 
-### Visual Diff Viewer
-
-Launch an interactive side-by-side diff viewer in your terminal:
-<img width="1725" height="1079" alt="image" src="https://github.com/user-attachments/assets/e846b8a6-d839-4e69-926c-b7ce42ce3f4c" />
-
-```bash
-# View uncommitted changes
-lumen diff
-
-# View changes for a specific commit
-lumen diff HEAD~1
-
-# View changes between branches
-lumen diff main..feature/A
-
-# Filter to specific files
-lumen diff --file src/main.rs --file src/lib.rs
-
-# Watch mode - auto-refresh on file changes
-lumen diff --watch
-```
-
-Keybindings in the diff viewer:
-- `j/k` or arrow keys: Navigate
-- `{/}`: Jump between hunks
-- `tab`: Toggle sidebar
-- `space`: Mark file as viewed
-- `e`: Open file in editor
-- `?`: Show all keybindings
-
 ### Explain Changes
 
-Understand what changed and why:
+Understand what changed and why. Explanations for your working directory are cached to avoid redundant AI calls:
 
 ```bash
 # Explain current changes in your working directory
@@ -172,8 +146,12 @@ lumen list
 lumen draft | pbcopy                  # macOS
 lumen draft | xclip -selection c      # Linux
 
-# View the commit message and copy it
-lumen draft | tee >(pbcopy)
+# Disable markdown rendering if needed
+lumen explain --no-mdcat
+
+# Enable verbose logging for debugging
+lumen --verbose explain
+lumen --log-target <file-path> --verbose draft
 
 # Open in your favorite editor
 lumen draft | code -      
@@ -230,6 +208,16 @@ export LUMEN_AI_MODEL="gpt-5-mini"
 | [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) `vercel` | Yes | [see list](https://vercel.com/docs/ai-gateway/supported-models) (default: `anthropic/claude-sonnet-4.5`) |
 
 ## Advanced Configuration 🔅
+
+### .lumenignore
+Lumen supports a `.lumenignore` file in your project root to exclude specific files or directories from being processed by the AI (e.g., lock files, large assets, or sensitive data). It follows standard gitignore pattern matching.
+
+``` gitignore
+.zed/
+.idea/
+GEMINI.md
+Cargo.lock
+```
 
 ### Configuration File
 Lumen supports configuration through a JSON file. You can place the configuration file in one of the following locations:
@@ -293,25 +281,11 @@ export LUMEN_API_KEY="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
 # Or override using CLI flags
 lumen -p "ollama" -m "llama3.2" draft
 ```
-## Contributors
 
-<a href="https://github.com/jnsahaj/lumen/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=jnsahaj/lumen" />
-</a>
+## Attribution
 
-Made with [contrib.rocks](https://contrib.rocks).
+This project is a fork of [jnsahaj/lumen](https://github.com/jnsahaj/lumen).
 
-### Interested in Contributing?
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-# Star History
-
-<p align="center">
-  <a target="_blank" href="https://star-history.com/#jnsahaj/lumen&Date">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=jnsahaj/lumen&type=Date&theme=dark">
-      <img alt="GitHub Star History for jnsahaj/lumen" src="https://api.star-history.com/svg?repos=jnsahaj/lumen&type=Date">
-    </picture>
-  </a>
-</p>
+The original project and its contributors laid the foundation for this work.
+For the full list of original contributors, please see:
+[Original Contributors](https://github.com/jnsahaj/lumen/graphs/contributors).
