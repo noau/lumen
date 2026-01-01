@@ -13,15 +13,22 @@ pub enum GitEntity {
     Diff(Diff),
 }
 
-pub const GIT_DIFF_EXCLUSIONS: [&str; 7] = [
-    "--", // Separator for pathspecs
-    ".",  // Include everything
-    ":(exclude)package-lock.json",
-    ":(exclude)yarn.lock",
-    ":(exclude)pnpm-lock.yaml",
-    ":(exclude)Cargo.lock",
-    ":(exclude)node_modules/**",
-];
+pub fn get_pathspecs() -> Vec<String> {
+    let mut args = vec!["--".to_string(), ".".to_string()];
+
+    // Add user defined exclusions from .lumenignore
+    if let Ok(content) = std::fs::read_to_string(".lumenignore") {
+        for line in content.lines() {
+            // Split by '#' to handle trailing comments and trim
+            let rule = line.split('#').next().unwrap_or("").trim();
+            if !rule.is_empty() {
+                args.push(format!(":(exclude){}", rule));
+            }
+        }
+    }
+
+    args
+}
 
 impl GitEntity {
     pub fn format_static_details(&self, provider: &LumenProvider) -> String {

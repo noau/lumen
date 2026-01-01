@@ -2,8 +2,6 @@ use crate::error::LumenError;
 use std::process::Command;
 use thiserror::Error;
 
-use super::GIT_DIFF_EXCLUSIONS;
-
 /// Errors that can occur when resolving commit metadata or diffs.
 #[derive(Error, Debug, Clone)]
 pub enum CommitError {
@@ -74,7 +72,7 @@ impl Commit {
                 "--compact-summary",
                 sha,
             ])
-            .args(GIT_DIFF_EXCLUSIONS)
+            .args(super::get_pathspecs())
             .output()?;
 
         let diff = String::from_utf8(output.stdout)?;

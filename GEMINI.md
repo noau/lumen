@@ -1,42 +1,78 @@
-# GEMINI.md
+# Lumen Project Context
 
 ## Project Overview
+**Lumen** is a command-line interface (CLI) tool written in Rust that leverages Artificial Intelligence to streamline Git workflows. It assists developers by generating commit messages, visualizing and explaining diffs, and translating natural language queries into Git commands.
 
-This project, named "lumen," is a command-line tool written in Rust that enhances the user's git workflow with AI-powered features. It can generate commit messages, explain code changes, and provide a visual diff viewer in the terminal. The tool is designed to be flexible, supporting multiple AI providers like OpenAI, Claude, Gemini, and others.
+## Architecture & Code Structure
+The project follows a standard Rust binary application structure with a modular design:
 
-The project is structured as a typical Rust application, with the main logic in the `src` directory. It uses the `clap` crate for command-line argument parsing, `reqwest` for making HTTP requests to AI APIs, and `ratatui` and `crossterm` for the terminal user interface. Syntax highlighting is implemented using `tree-sitter`.
+- **`src/main.rs`**: The entry point of the application. It initializes the configuration, sets up the AI provider, and dispatches the parsed CLI commands.
+- **`src/command/`**: Contains the implementation for each CLI command.
+    - `mod.rs`: Central dispatcher enum `CommandType` and `LumenCommand` struct.
+    - `draft.rs`: Logic for generating commit messages (`lumen draft`).
+    - `explain.rs`: Logic for explaining changes (`lumen explain`).
+    - `operate.rs`: Logic for natural language git operations (`lumen operate`).
+    - `list.rs`: Interactive commit list (`lumen list`).
+    - `configure.rs`: Interactive configuration setup (`lumen configure`).
+- **`src/config/`**: Handles configuration loading and parsing.
+    - `configuration.rs`: Defines the `LumenConfig` struct.
+    - `providers.rs`: AI provider configuration details.
+- **`src/git_entity/`**: Abstractions for Git objects.
+    - `commit.rs`: handling commit data.
+    - `diff.rs`: handling diff generation and parsing.
+- **`src/provider/`**: Interfaces with various AI providers (OpenAI, Claude, Gemini, etc.) via the `genai` crate.
+- **`src/ai_prompt.rs`**: Likely contains the system prompts used to instruct the LLMs.
 
-Lumen also integrates with other command-line tools like `fzf` for interactive commit selection and `mdcat` for rendering Markdown in the terminal.
+## Development Workflow
 
-## Building and Running
+### Prerequisites
+- **Rust**: Ensure you have the latest stable version of Rust and Cargo installed (`rustup`).
+- **Git**: The tool relies heavily on local `git` commands.
+- **Optional Tools**:
+    - `fzf`: Required for the `list` command's interactive fuzzy finding.
+    - `mdcat`: Required for rendering Markdown output in the terminal.
 
-To build the project, you need to have Rust and Cargo installed.
+### Building and Running
+Use standard Cargo commands to build and run the project:
 
-**Building:**
 ```bash
+# Build the project
 cargo build
-```
 
-**Running:**
-You can run the application using `cargo run` with the desired command. For example:
-```bash
-# View the diff of the current changes
-cargo run -- diff
-
-# Generate a commit message for staged changes
+# Run the project (pass arguments after --)
+cargo run -- --help
 cargo run -- draft
+cargo run -- explain
 ```
 
-**Testing:**
-The project does not have a readily apparent test suite in the file structure.
+### Testing
+Run the test suite to ensure changes don't break existing functionality:
 
-## Development Conventions
+```bash
+cargo test
+```
 
-*   **Code Style:** The code follows standard Rust conventions.
-*   **Commit Messages:** The tool itself is designed to generate conventional commit messages, so it's likely that the project follows this convention for its own commits.
-*   **Error Handling:** The project uses a custom `LumenError` enum for error handling.
-*   **Modularity:** The code is well-structured into modules, with each module responsible for a specific feature (e.g., `diff_ui`, `ai_prompt`, `git_entity`).
-*   **Command Structure:** The application uses a `CommandType` enum to represent the different commands, and a `LumenCommand` struct to execute them. This provides a clear and organized way to manage the different functionalities of the tool.
-*   **External Tool Integration:** The project is designed to integrate with other command-line tools like `fzf` and `mdcat` to enhance its functionality.
-*   **AI Provider Abstraction:** The `LumenProvider` struct abstracts the interaction with different AI providers. It uses the `genai` crate to provide a unified interface to various AI models, including custom providers like OpenRouter and Vercel. This makes it easy to add support for new AI providers in the future.
-*   **Prompt Engineering:** The `ai_prompt.rs` file is dedicated to building the prompts that are sent to the AI models. The prompts are carefully crafted to ensure that the AI-generated responses are accurate and concise. This is a key part of the application's AI-powered features.
+## Configuration
+Lumen requires configuration to access AI features. The configuration file `lumen.config.json` is looked up in the following order:
+1. CLI arguments.
+2. Custom path via `--config`.
+3. Project root.
+4. Global configuration directory (`~/.config/lumen/` on *nix, `%USERPROFILE%\.config\lumen\` on Windows).
+
+For development, you can create a `lumen.config.json` in the project root:
+
+```json
+{
+  "provider": "openai",
+  "model": "gpt-4o-mini",
+  "api_key": "your-api-key-here"
+}
+```
+
+## Key Dependencies
+- **`clap`**: Command-line argument parsing.
+- **`tokio`**: Asynchronous runtime.
+- **`genai`**: Universal LLM client.
+- **`inquire`**: Interactive terminal prompts.
+- **`spinoff`**: Terminal spinners for loading states.
+- **`serde`**: Serialization and deserialization.

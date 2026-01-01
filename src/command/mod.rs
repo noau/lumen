@@ -1,3 +1,4 @@
+use std::io::Write;
 use draft::DraftCommand;
 use explain::ExplainCommand;
 use list::ListCommand;
@@ -98,25 +99,28 @@ impl LumenCommand {
     }
 
     fn print_with_mdcat(content: String) -> Result<(), LumenError> {
-        match std::process::Command::new("mdcat")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-        {
-            Ok(mut mdcat) => {
-                if let Some(stdin) = mdcat.stdin.take() {
-                    std::process::Command::new("echo")
-                        .arg(&content)
-                        .stdout(stdin)
-                        .spawn()?
-                        .wait()?;
-                }
-                let output = mdcat.wait_with_output()?;
+        let try_mdcat = |text: &str| -> Result<(), Box<dyn std::error::Error>> {
+            let mut child = std::process::Command::new("mdcat")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::null())
+                .spawn()?;
+
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin.write_all(text.as_bytes())?;
+            }
+
+            let output = child.wait_with_output()?;
+            if output.status.success() {
                 println!("{}", String::from_utf8(output.stdout)?);
+                Ok(())
+            } else {
+                Err("mdcat failed".into())
             }
-            Err(_) => {
-                println!("{}", content);
-            }
+        };
+
+        if try_mdcat(&content).is_err() {
+            println!("{}", content);
         }
         Ok(())
     }
