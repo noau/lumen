@@ -1,10 +1,10 @@
 use crate::{
     error::LumenError,
-    git_entity::{commit::Commit, GitEntity},
+    git_entity::{GitEntity, commit::Commit},
     provider::LumenProvider,
 };
 
-use super::{explain::ExplainCommand, LumenCommand};
+use super::{LumenCommand, explain::ExplainCommand};
 
 pub struct ListCommand;
 

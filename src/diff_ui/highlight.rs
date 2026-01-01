@@ -711,9 +711,15 @@ mod tests {
         let extensions: Vec<&str> = CONFIGS.iter().map(|(ext, _)| *ext).collect();
         // Should have all expected languages
         assert!(extensions.contains(&"rs"), "Rust config should be loaded");
-        assert!(extensions.contains(&"ts"), "TypeScript config should be loaded");
+        assert!(
+            extensions.contains(&"ts"),
+            "TypeScript config should be loaded"
+        );
         assert!(extensions.contains(&"tsx"), "TSX config should be loaded");
-        assert!(extensions.contains(&"js"), "JavaScript config should be loaded");
+        assert!(
+            extensions.contains(&"js"),
+            "JavaScript config should be loaded"
+        );
         assert!(extensions.contains(&"py"), "Python config should be loaded");
         assert!(extensions.contains(&"go"), "Go config should be loaded");
         assert!(extensions.contains(&"json"), "JSON config should be loaded");
@@ -727,7 +733,10 @@ mod tests {
 }"#;
         let result = highlight_code(code, "test.rs");
         // Should have multiple highlighted segments
-        assert!(!result.is_empty(), "Rust highlighting should produce output");
+        assert!(
+            !result.is_empty(),
+            "Rust highlighting should produce output"
+        );
         // Should have some highlights (not all None)
         let has_highlights = result.iter().any(|(_, h)| h.is_some());
         assert!(has_highlights, "Rust code should have syntax highlights");
@@ -740,9 +749,15 @@ function hello(): string {
     return "world";
 }"#;
         let result = highlight_code(code, "test.ts");
-        assert!(!result.is_empty(), "TypeScript highlighting should produce output");
+        assert!(
+            !result.is_empty(),
+            "TypeScript highlighting should produce output"
+        );
         let has_highlights = result.iter().any(|(_, h)| h.is_some());
-        assert!(has_highlights, "TypeScript code should have syntax highlights");
+        assert!(
+            has_highlights,
+            "TypeScript code should have syntax highlights"
+        );
     }
 
     #[test]
@@ -752,7 +767,10 @@ function hello(): string {
     return "world"
 "#;
         let result = highlight_code(code, "test.py");
-        assert!(!result.is_empty(), "Python highlighting should produce output");
+        assert!(
+            !result.is_empty(),
+            "Python highlighting should produce output"
+        );
         let has_highlights = result.iter().any(|(_, h)| h.is_some());
         assert!(has_highlights, "Python code should have syntax highlights");
     }

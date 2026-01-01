@@ -1,4 +1,4 @@
-use spinoff::{spinners, Color, Spinner};
+use spinoff::{Color, Spinner, spinners};
 use std::io::{self, Write};
 use thiserror::Error;
 use xml::reader::{EventReader, XmlEvent};

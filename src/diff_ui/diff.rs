@@ -1,6 +1,6 @@
 use similar::{ChangeTag, TextDiff};
 
-use crate::diff_ui::types::{expand_tabs, ChangeType, DiffLine};
+use crate::diff_ui::types::{ChangeType, DiffLine, expand_tabs};
 
 pub fn compute_side_by_side(old: &str, new: &str, tab_width: usize) -> Vec<DiffLine> {
     let diff = TextDiff::from_lines(old, new);

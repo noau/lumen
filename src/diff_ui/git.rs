@@ -11,9 +11,7 @@ pub fn get_current_branch() -> String {
         .output();
 
     match output {
-        Ok(o) if o.status.success() => {
-            String::from_utf8_lossy(&o.stdout).trim().to_string()
-        }
+        Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).trim().to_string(),
         _ => "unknown".to_string(),
     }
 }
@@ -135,9 +133,7 @@ pub fn get_old_content(filename: &str, refs: &DiffRefs) -> String {
         DiffRefs::Range { from, .. } => format!("{}:{}", from, filename),
         DiffRefs::WorkingTree => format!("HEAD:{}", filename),
     };
-    let output = Command::new("git")
-        .args(["show", &ref_spec])
-        .output();
+    let output = Command::new("git").args(["show", &ref_spec]).output();
 
     match output {
         Ok(o) if o.status.success() => String::from_utf8_lossy(&o.stdout).to_string(),

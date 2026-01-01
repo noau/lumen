@@ -1,4 +1,4 @@
-use spinoff::{spinners, Color, Spinner};
+use spinoff::{Color, Spinner, spinners};
 
 use crate::{error::LumenError, git_entity::GitEntity, provider::LumenProvider};
 

@@ -34,10 +34,7 @@ pub enum FileStatus {
 #[derive(Clone)]
 pub enum ModalContent {
     #[allow(dead_code)]
-    Info {
-        title: String,
-        message: String,
-    },
+    Info { title: String, message: String },
     #[allow(dead_code)]
     Select {
         title: String,
@@ -138,7 +135,9 @@ impl Modal {
                 let height = (total_lines as u16 + 4).min(area.height * 80 / 100).max(5);
                 (width, height)
             }
-            ModalContent::FilePicker { filtered_indices, .. } => {
+            ModalContent::FilePicker {
+                filtered_indices, ..
+            } => {
                 let width = 80.min(area.width.saturating_sub(4));
                 let items_count = filtered_indices.len().min(15) as u16;
                 let height = (items_count + 5).min(area.height * 80 / 100).max(8);
@@ -173,7 +172,15 @@ impl Modal {
                 query,
                 selected,
             } => {
-                self.render_file_picker(frame, modal_area, title, items, filtered_indices, query, *selected);
+                self.render_file_picker(
+                    frame,
+                    modal_area,
+                    title,
+                    items,
+                    filtered_indices,
+                    query,
+                    *selected,
+                );
             }
         }
     }
@@ -306,7 +313,11 @@ impl Modal {
         use ratatui::layout::{Constraint, Direction, Layout};
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Min(1)])
+            .constraints([
+                Constraint::Length(1),
+                Constraint::Length(1),
+                Constraint::Min(1),
+            ])
             .split(inner);
 
         let input_line = Line::from(vec![
@@ -349,8 +360,14 @@ impl Modal {
                     ]
                 } else {
                     vec![
-                        Span::styled(format!(" {} ", viewed_char), Style::default().fg(Color::Green)),
-                        Span::styled(format!("{} ", status_char), Style::default().fg(status_color)),
+                        Span::styled(
+                            format!(" {} ", viewed_char),
+                            Style::default().fg(Color::Green),
+                        ),
+                        Span::styled(
+                            format!("{} ", status_char),
+                            Style::default().fg(status_color),
+                        ),
                         Span::styled(item.name.clone(), Style::default().fg(Color::White)),
                     ]
                 };
@@ -387,26 +404,24 @@ impl Modal {
             }
             ModalContent::Select {
                 items, selected, ..
-            } => {
-                match key.code {
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        if *selected < items.len().saturating_sub(1) {
-                            *selected += 1;
-                        }
-                        None
+            } => match key.code {
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if *selected < items.len().saturating_sub(1) {
+                        *selected += 1;
                     }
-                    KeyCode::Up | KeyCode::Char('k') => {
-                        *selected = selected.saturating_sub(1);
-                        None
-                    }
-                    KeyCode::Enter => {
-                        let idx = *selected;
-                        let value = items.get(idx).cloned().unwrap_or_default();
-                        Some(ModalResult::Selected(idx, value))
-                    }
-                    _ => None,
+                    None
                 }
-            }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    *selected = selected.saturating_sub(1);
+                    None
+                }
+                KeyCode::Enter => {
+                    let idx = *selected;
+                    let value = items.get(idx).cloned().unwrap_or_default();
+                    Some(ModalResult::Selected(idx, value))
+                }
+                _ => None,
+            },
             ModalContent::KeyBindings { .. } => {
                 if key.code == KeyCode::Enter {
                     return Some(ModalResult::Dismissed);
@@ -419,52 +434,55 @@ impl Modal {
                 query,
                 selected,
                 ..
-            } => {
-                match key.code {
-                    KeyCode::Esc => Some(ModalResult::Dismissed),
-                    KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            } => match key.code {
+                KeyCode::Esc => Some(ModalResult::Dismissed),
+                KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    Some(ModalResult::Dismissed)
+                }
+                KeyCode::Down | KeyCode::Char('j')
+                    if key.modifiers.contains(KeyModifiers::CONTROL)
+                        || key.code == KeyCode::Down =>
+                {
+                    if *selected < filtered_indices.len().saturating_sub(1) {
+                        *selected += 1;
+                    }
+                    None
+                }
+                KeyCode::Up | KeyCode::Char('k')
+                    if key.modifiers.contains(KeyModifiers::CONTROL) || key.code == KeyCode::Up =>
+                {
+                    *selected = selected.saturating_sub(1);
+                    None
+                }
+                KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    if *selected < filtered_indices.len().saturating_sub(1) {
+                        *selected += 1;
+                    }
+                    None
+                }
+                KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                    *selected = selected.saturating_sub(1);
+                    None
+                }
+                KeyCode::Enter => {
+                    if let Some(&file_idx) = filtered_indices.get(*selected) {
+                        Some(ModalResult::FileSelected(items[file_idx].file_index))
+                    } else {
                         Some(ModalResult::Dismissed)
                     }
-                    KeyCode::Down | KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) || key.code == KeyCode::Down => {
-                        if *selected < filtered_indices.len().saturating_sub(1) {
-                            *selected += 1;
-                        }
-                        None
-                    }
-                    KeyCode::Up | KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) || key.code == KeyCode::Up => {
-                        *selected = selected.saturating_sub(1);
-                        None
-                    }
-                    KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        if *selected < filtered_indices.len().saturating_sub(1) {
-                            *selected += 1;
-                        }
-                        None
-                    }
-                    KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                        *selected = selected.saturating_sub(1);
-                        None
-                    }
-                    KeyCode::Enter => {
-                        if let Some(&file_idx) = filtered_indices.get(*selected) {
-                            Some(ModalResult::FileSelected(items[file_idx].file_index))
-                        } else {
-                            Some(ModalResult::Dismissed)
-                        }
-                    }
-                    KeyCode::Backspace => {
-                        query.pop();
-                        Self::update_filtered_indices(items, query, filtered_indices, selected);
-                        None
-                    }
-                    KeyCode::Char(c) => {
-                        query.push(c);
-                        Self::update_filtered_indices(items, query, filtered_indices, selected);
-                        None
-                    }
-                    _ => None,
                 }
-            }
+                KeyCode::Backspace => {
+                    query.pop();
+                    Self::update_filtered_indices(items, query, filtered_indices, selected);
+                    None
+                }
+                KeyCode::Char(c) => {
+                    query.push(c);
+                    Self::update_filtered_indices(items, query, filtered_indices, selected);
+                    None
+                }
+                _ => None,
+            },
         }
     }
 

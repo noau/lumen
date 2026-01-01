@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 
-use notify_debouncer_mini::{new_debouncer, DebouncedEventKind};
+use notify_debouncer_mini::{DebouncedEventKind, new_debouncer};
 
 pub fn setup_watcher() -> Option<Receiver<()>> {
     let (tx, rx) = mpsc::channel();

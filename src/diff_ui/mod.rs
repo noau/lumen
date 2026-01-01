@@ -14,20 +14,22 @@ use std::sync::mpsc::TryRecvError;
 use std::time::Duration;
 
 use crossterm::{
-    event::{
-        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind,
-        KeyModifiers, MouseEventKind,
-    },
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
     ExecutableCommand,
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEventKind, KeyModifiers,
+        MouseEventKind,
+    },
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::prelude::*;
 
 use crate::commit_reference::CommitReference;
 use diff::{compute_side_by_side, find_hunk_starts};
 use git::load_file_diffs;
-pub use modal::{FilePickerItem, FileStatus as ModalFileStatus, KeyBind, KeyBindSection, Modal, ModalResult};
-use types::{build_file_tree, DiffFullscreen, DiffViewSettings, FocusedPanel, SidebarItem};
+pub use modal::{
+    FilePickerItem, FileStatus as ModalFileStatus, KeyBind, KeyBindSection, Modal, ModalResult,
+};
+use types::{DiffFullscreen, DiffViewSettings, FocusedPanel, SidebarItem, build_file_tree};
 use watcher::setup_watcher;
 
 #[derive(Default, Clone, Copy, PartialEq)]
@@ -52,11 +54,7 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
 
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
-    let watch_rx = if options.watch {
-        setup_watcher()
-    } else {
-        None
-    };
+    let watch_rx = if options.watch { setup_watcher() } else { None };
 
     let mut file_diffs = load_file_diffs(&options);
     let mut needs_reload = false;
@@ -82,7 +80,8 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
     let mut diff_fullscreen = DiffFullscreen::default();
     let mut scroll: u16 = if !file_diffs.is_empty() && current_file < file_diffs.len() {
         let diff = &file_diffs[current_file];
-        let side_by_side = compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+        let side_by_side =
+            compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
         let hunks = find_hunk_starts(&side_by_side);
         hunks
             .first()
@@ -132,7 +131,8 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
             }
             if !file_diffs.is_empty() {
                 let diff = &file_diffs[current_file];
-                let side_by_side = compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                let side_by_side =
+                    compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
                 let hunks = find_hunk_starts(&side_by_side);
                 scroll = hunks
                     .first()
@@ -152,7 +152,8 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
             })?;
         } else {
             let diff = &file_diffs[current_file];
-            let side_by_side = compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+            let side_by_side =
+                compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
             let hunk_count = find_hunk_starts(&side_by_side).len();
             terminal.draw(|frame| {
                 ui::render_diff(
@@ -185,7 +186,9 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
             let bottom_padding = 5;
             let max_scroll = if !file_diffs.is_empty() {
                 let diff = &file_diffs[current_file];
-                let total_lines = compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width).len();
+                let total_lines =
+                    compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width)
+                        .len();
                 total_lines.saturating_sub(visible_height.saturating_sub(bottom_padding))
             } else {
                 0
@@ -210,9 +213,16 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                     }
                                 }
                                 let diff = &file_diffs[current_file];
-                                let side_by_side = compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                let side_by_side = compute_side_by_side(
+                                    &diff.old_content,
+                                    &diff.new_content,
+                                    settings.tab_width,
+                                );
                                 let hunks = find_hunk_starts(&side_by_side);
-                                scroll = hunks.first().map(|&h| (h as u16).saturating_sub(5)).unwrap_or(0);
+                                scroll = hunks
+                                    .first()
+                                    .map(|&h| (h as u16).saturating_sub(5))
+                                    .unwrap_or(0);
                                 h_scroll = 0;
                             }
                             active_modal = None;
@@ -233,7 +243,10 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                 let clicked_row =
                                     (mouse.row.saturating_sub(1)) as usize + sidebar_scroll;
                                 if clicked_row < sidebar_items.len() {
-                                    if matches!(sidebar_items[clicked_row], SidebarItem::File { .. }) {
+                                    if matches!(
+                                        sidebar_items[clicked_row],
+                                        SidebarItem::File { .. }
+                                    ) {
                                         sidebar_selected = clicked_row;
                                         focused_panel = FocusedPanel::DiffView;
                                         if let SidebarItem::File { file_index, .. } =
@@ -265,8 +278,7 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                 && mouse.column < sidebar_width
                                 && mouse.row < term_size.height.saturating_sub(footer_height)
                             {
-                                let max_sidebar_scroll =
-                                    sidebar_items.len().saturating_sub(1);
+                                let max_sidebar_scroll = sidebar_items.len().saturating_sub(1);
                                 sidebar_scroll = (sidebar_scroll + 3).min(max_sidebar_scroll);
                             } else if mouse.column >= sidebar_width
                                 && mouse.row < term_size.height.saturating_sub(footer_height)
@@ -295,7 +307,9 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                     }
                     match key.code {
                         KeyCode::Char('q') | KeyCode::Esc => break,
-                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => break,
+                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+                            break;
+                        }
                         KeyCode::Char('1') => {
                             focused_panel = FocusedPanel::Sidebar;
                             show_sidebar = true;
@@ -320,15 +334,15 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                 focused_panel = FocusedPanel::DiffView;
                             }
                         }
-                        KeyCode::Char('j')
-                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
+                        KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             // Ctrl+j: next file (in sidebar visual order)
                             if !file_diffs.is_empty() {
                                 // Find next file item after current sidebar_selected
                                 let mut next = sidebar_selected + 1;
                                 while next < sidebar_items.len() {
-                                    if let SidebarItem::File { file_index, .. } = &sidebar_items[next] {
+                                    if let SidebarItem::File { file_index, .. } =
+                                        &sidebar_items[next]
+                                    {
                                         sidebar_selected = next;
                                         current_file = *file_index;
                                         diff_fullscreen = DiffFullscreen::None;
@@ -342,8 +356,11 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                             sidebar_scroll = sidebar_selected;
                                         }
                                         let diff = &file_diffs[current_file];
-                                        let side_by_side =
-                                            compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                        let side_by_side = compute_side_by_side(
+                                            &diff.old_content,
+                                            &diff.new_content,
+                                            settings.tab_width,
+                                        );
                                         let hunks = find_hunk_starts(&side_by_side);
                                         scroll = hunks
                                             .first()
@@ -356,15 +373,15 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                 }
                             }
                         }
-                        KeyCode::Char('k')
-                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
+                        KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             // Ctrl+k: previous file (in sidebar visual order)
                             if !file_diffs.is_empty() && sidebar_selected > 0 {
                                 // Find previous file item before current sidebar_selected
                                 let mut prev = sidebar_selected - 1;
                                 loop {
-                                    if let SidebarItem::File { file_index, .. } = &sidebar_items[prev] {
+                                    if let SidebarItem::File { file_index, .. } =
+                                        &sidebar_items[prev]
+                                    {
                                         sidebar_selected = prev;
                                         current_file = *file_index;
                                         diff_fullscreen = DiffFullscreen::None;
@@ -373,8 +390,11 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                             sidebar_scroll = sidebar_selected;
                                         }
                                         let diff = &file_diffs[current_file];
-                                        let side_by_side =
-                                            compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                        let side_by_side = compute_side_by_side(
+                                            &diff.old_content,
+                                            &diff.new_content,
+                                            settings.tab_width,
+                                        );
                                         let hunks = find_hunk_starts(&side_by_side);
                                         scroll = hunks
                                             .first()
@@ -390,23 +410,17 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                 }
                             }
                         }
-                        KeyCode::Char('d')
-                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
+                        KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             // Ctrl+d: scroll down half a screen (vim behavior)
                             let half_screen = (visible_height / 2) as u16;
                             scroll = (scroll + half_screen).min(max_scroll as u16);
                         }
-                        KeyCode::Char('u')
-                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
+                        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             // Ctrl+u: scroll up half a screen (vim behavior)
                             let half_screen = (visible_height / 2) as u16;
                             scroll = scroll.saturating_sub(half_screen);
                         }
-                        KeyCode::Char('p')
-                            if key.modifiers.contains(KeyModifiers::CONTROL) =>
-                        {
+                        KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
                             // Ctrl+p: open file picker (telescope-style fuzzy finder)
                             if !file_diffs.is_empty() {
                                 let items: Vec<FilePickerItem> = file_diffs
@@ -415,7 +429,9 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                     .map(|(i, diff)| {
                                         let status = match diff.status {
                                             types::FileStatus::Added => ModalFileStatus::Added,
-                                            types::FileStatus::Modified => ModalFileStatus::Modified,
+                                            types::FileStatus::Modified => {
+                                                ModalFileStatus::Modified
+                                            }
                                             types::FileStatus::Deleted => ModalFileStatus::Deleted,
                                         };
                                         FilePickerItem {
@@ -525,8 +541,11 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                     current_file = *file_index;
                                     diff_fullscreen = DiffFullscreen::None;
                                     let diff = &file_diffs[current_file];
-                                    let side_by_side =
-                                        compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                    let side_by_side = compute_side_by_side(
+                                        &diff.old_content,
+                                        &diff.new_content,
+                                        settings.tab_width,
+                                    );
                                     let hunks = find_hunk_starts(&side_by_side);
                                     scroll = hunks
                                         .first()
@@ -590,7 +609,9 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                     // Find next non-viewed file in sidebar order, wrapping around if needed
                                     // First, try files after current position
                                     let mut next_file: Option<(usize, usize)> = None;
-                                    for (idx, item) in sidebar_items.iter().enumerate().skip(sidebar_selected + 1) {
+                                    for (idx, item) in
+                                        sidebar_items.iter().enumerate().skip(sidebar_selected + 1)
+                                    {
                                         if let SidebarItem::File { file_index, .. } = item {
                                             if !viewed_files.contains(file_index) {
                                                 next_file = Some((idx, *file_index));
@@ -600,7 +621,9 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                     }
                                     // If not found, wrap around and search from beginning
                                     if next_file.is_none() {
-                                        for (idx, item) in sidebar_items.iter().enumerate().take(sidebar_selected) {
+                                        for (idx, item) in
+                                            sidebar_items.iter().enumerate().take(sidebar_selected)
+                                        {
                                             if let SidebarItem::File { file_index, .. } = item {
                                                 if !viewed_files.contains(file_index) {
                                                     next_file = Some((idx, *file_index));
@@ -623,8 +646,11 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                             sidebar_scroll = sidebar_selected;
                                         }
                                         let diff = &file_diffs[current_file];
-                                        let side_by_side =
-                                            compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                        let side_by_side = compute_side_by_side(
+                                            &diff.old_content,
+                                            &diff.new_content,
+                                            settings.tab_width,
+                                        );
                                         let hunks = find_hunk_starts(&side_by_side);
                                         scroll = hunks
                                             .first()
@@ -644,8 +670,11 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                         KeyCode::Char('}') => {
                             if !file_diffs.is_empty() {
                                 let diff = &file_diffs[current_file];
-                                let side_by_side =
-                                    compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                let side_by_side = compute_side_by_side(
+                                    &diff.old_content,
+                                    &diff.new_content,
+                                    settings.tab_width,
+                                );
                                 let hunks = find_hunk_starts(&side_by_side);
                                 if let Some(&next) =
                                     hunks.iter().find(|&&h| h > scroll as usize + 5)
@@ -657,8 +686,11 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                         KeyCode::Char('{') => {
                             if !file_diffs.is_empty() {
                                 let diff = &file_diffs[current_file];
-                                let side_by_side =
-                                    compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+                                let side_by_side = compute_side_by_side(
+                                    &diff.old_content,
+                                    &diff.new_content,
+                                    settings.tab_width,
+                                );
                                 let hunks = find_hunk_starts(&side_by_side);
                                 if let Some(&prev) = hunks
                                     .iter()
@@ -685,7 +717,8 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                 io::stdout().execute(LeaveAlternateScreen)?;
                                 disable_raw_mode()?;
 
-                                let editor = std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
+                                let editor =
+                                    std::env::var("EDITOR").unwrap_or_else(|_| "vim".to_string());
                                 let _ = std::process::Command::new(&editor)
                                     .arg(&file_diffs[current_file].filename)
                                     .status();
@@ -714,39 +747,108 @@ pub fn run_diff_ui(options: DiffOptions) -> io::Result<()> {
                                     KeyBindSection {
                                         title: "Global",
                                         bindings: vec![
-                                            KeyBind { key: "q / esc", description: "Quit" },
-                                            KeyBind { key: "tab", description: "Toggle sidebar" },
-                                            KeyBind { key: "1 / 2", description: "Focus sidebar / diff" },
-                                            KeyBind { key: "ctrl+j / ctrl+k", description: "Next / previous file" },
-                                            KeyBind { key: "ctrl+d / ctrl+u", description: "Scroll half page down / up" },
-                                            KeyBind { key: "ctrl+p", description: "Open file picker" },
-                                            KeyBind { key: "r", description: "Reload diff" },
-                                            KeyBind { key: "y", description: "Copy current filename" },
-                                            KeyBind { key: "e", description: "Open current file in editor" },
-                                            KeyBind { key: "?", description: "Show keybindings" },
+                                            KeyBind {
+                                                key: "q / esc",
+                                                description: "Quit",
+                                            },
+                                            KeyBind {
+                                                key: "tab",
+                                                description: "Toggle sidebar",
+                                            },
+                                            KeyBind {
+                                                key: "1 / 2",
+                                                description: "Focus sidebar / diff",
+                                            },
+                                            KeyBind {
+                                                key: "ctrl+j / ctrl+k",
+                                                description: "Next / previous file",
+                                            },
+                                            KeyBind {
+                                                key: "ctrl+d / ctrl+u",
+                                                description: "Scroll half page down / up",
+                                            },
+                                            KeyBind {
+                                                key: "ctrl+p",
+                                                description: "Open file picker",
+                                            },
+                                            KeyBind {
+                                                key: "r",
+                                                description: "Reload diff",
+                                            },
+                                            KeyBind {
+                                                key: "y",
+                                                description: "Copy current filename",
+                                            },
+                                            KeyBind {
+                                                key: "e",
+                                                description: "Open current file in editor",
+                                            },
+                                            KeyBind {
+                                                key: "?",
+                                                description: "Show keybindings",
+                                            },
                                         ],
                                     },
                                     KeyBindSection {
                                         title: "Sidebar",
                                         bindings: vec![
-                                            KeyBind { key: "j/k or up/down", description: "Navigate files" },
-                                            KeyBind { key: "h/l or left/right", description: "Scroll horizontally" },
-                                            KeyBind { key: "enter", description: "Open file in diff view" },
-                                            KeyBind { key: "space", description: "Toggle file as viewed" },
+                                            KeyBind {
+                                                key: "j/k or up/down",
+                                                description: "Navigate files",
+                                            },
+                                            KeyBind {
+                                                key: "h/l or left/right",
+                                                description: "Scroll horizontally",
+                                            },
+                                            KeyBind {
+                                                key: "enter",
+                                                description: "Open file in diff view",
+                                            },
+                                            KeyBind {
+                                                key: "space",
+                                                description: "Toggle file as viewed",
+                                            },
                                         ],
                                     },
                                     KeyBindSection {
                                         title: "Diff View",
                                         bindings: vec![
-                                            KeyBind { key: "j/k or up/down", description: "Scroll vertically" },
-                                            KeyBind { key: "h/l or left/right", description: "Scroll horizontally" },
-                                            KeyBind { key: "gg / G", description: "Scroll to top / bottom" },
-                                            KeyBind { key: "{ / }", description: "Previous / next hunk" },
-                                            KeyBind { key: "pageup / pagedown", description: "Scroll by page" },
-                                            KeyBind { key: "space", description: "Mark viewed & next file" },
-                                            KeyBind { key: "]", description: "Toggle new panel fullscreen" },
-                                            KeyBind { key: "[", description: "Toggle old panel fullscreen" },
-                                            KeyBind { key: "=", description: "Reset fullscreen to side-by-side" },
+                                            KeyBind {
+                                                key: "j/k or up/down",
+                                                description: "Scroll vertically",
+                                            },
+                                            KeyBind {
+                                                key: "h/l or left/right",
+                                                description: "Scroll horizontally",
+                                            },
+                                            KeyBind {
+                                                key: "gg / G",
+                                                description: "Scroll to top / bottom",
+                                            },
+                                            KeyBind {
+                                                key: "{ / }",
+                                                description: "Previous / next hunk",
+                                            },
+                                            KeyBind {
+                                                key: "pageup / pagedown",
+                                                description: "Scroll by page",
+                                            },
+                                            KeyBind {
+                                                key: "space",
+                                                description: "Mark viewed & next file",
+                                            },
+                                            KeyBind {
+                                                key: "]",
+                                                description: "Toggle new panel fullscreen",
+                                            },
+                                            KeyBind {
+                                                key: "[",
+                                                description: "Toggle old panel fullscreen",
+                                            },
+                                            KeyBind {
+                                                key: "=",
+                                                description: "Reset fullscreen to side-by-side",
+                                            },
                                         ],
                                     },
                                 ],

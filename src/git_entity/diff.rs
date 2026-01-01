@@ -1,7 +1,7 @@
 use crate::error::LumenError;
 use thiserror::Error;
 
-use super::{commit::Commit, GIT_DIFF_EXCLUSIONS};
+use super::{GIT_DIFF_EXCLUSIONS, commit::Commit};
 
 #[derive(Error, Debug)]
 pub enum DiffError {

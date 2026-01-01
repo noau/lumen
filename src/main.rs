@@ -1,9 +1,9 @@
 use clap::Parser;
 use commit_reference::CommitReference;
-use config::cli::{Cli, Commands};
 use config::LumenConfig;
+use config::cli::{Cli, Commands};
 use error::LumenError;
-use git_entity::{commit::Commit, diff::Diff, GitEntity};
+use git_entity::{GitEntity, commit::Commit, diff::Diff};
 use std::io::Read;
 use std::process;
 
@@ -32,8 +32,7 @@ async fn run() -> Result<(), LumenError> {
         Err(e) => return Err(e),
     };
 
-    let provider =
-        provider::LumenProvider::new(config.provider, config.api_key, config.model)?;
+    let provider = provider::LumenProvider::new(config.provider, config.api_key, config.model)?;
     let command = command::LumenCommand::new(provider);
 
     match cli.command {

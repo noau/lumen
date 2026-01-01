@@ -6,8 +6,8 @@ use thiserror::Error;
 
 use crate::ai_prompt::{AIPrompt, AIPromptError};
 use crate::command::{draft::DraftCommand, explain::ExplainCommand, operate::OperateCommand};
-use crate::config::cli::ProviderType;
 use crate::config::ProviderInfo;
+use crate::config::cli::ProviderType;
 use crate::error::LumenError;
 
 #[derive(Error, Debug)]
@@ -72,7 +72,8 @@ impl LumenProvider {
                 // Get API key from CLI/config or environment
                 let auth_env_key = config.env_key;
                 if let Some(key) = api_key {
-                    std::env::set_var(auth_env_key, key);
+                    // TODO: Audit that the environment access only happens in single-threaded code.
+                    unsafe { std::env::set_var(auth_env_key, key) };
                 }
 
                 let endpoint = config.endpoint;
@@ -110,7 +111,8 @@ impl LumenProvider {
                 // If api_key provided via CLI/config, set it in env so genai picks it up
                 if let Some(key) = api_key {
                     if !defaults.env_key.is_empty() {
-                        std::env::set_var(defaults.env_key, key);
+                        // TODO: Audit that the environment access only happens in single-threaded code.
+                        unsafe { std::env::set_var(defaults.env_key, key) };
                     }
                 }
 

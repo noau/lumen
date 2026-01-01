@@ -5,11 +5,13 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 
-use crate::diff_ui::context::{compute_context_lines, ContextLine};
+use crate::diff_ui::context::{ContextLine, compute_context_lines};
 use crate::diff_ui::diff::compute_side_by_side;
 use crate::diff_ui::git::get_current_branch;
 use crate::diff_ui::highlight::highlight_line_spans;
-use crate::diff_ui::types::{ChangeType, DiffFullscreen, DiffLine, DiffViewSettings, FileDiff, FocusedPanel, SidebarItem};
+use crate::diff_ui::types::{
+    ChangeType, DiffFullscreen, DiffLine, DiffViewSettings, FileDiff, FocusedPanel, SidebarItem,
+};
 
 pub struct LineStats {
     pub added: usize,
@@ -35,11 +37,8 @@ pub fn render_empty_state(frame: &mut Frame, watching: bool) {
     } else {
         ""
     };
-    let msg = Paragraph::new(format!("No changes detected.{}", watch_hint)).block(
-        Block::default()
-            .title(" Git Review ")
-            .borders(Borders::ALL),
-    );
+    let msg = Paragraph::new(format!("No changes detected.{}", watch_hint))
+        .block(Block::default().title(" Git Review ").borders(Borders::ALL));
     frame.render_widget(msg, frame.area());
 }
 
@@ -76,7 +75,8 @@ pub fn render_diff(
     diff_fullscreen: DiffFullscreen,
 ) {
     let area = frame.area();
-    let side_by_side = compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
+    let side_by_side =
+        compute_side_by_side(&diff.old_content, &diff.new_content, settings.tab_width);
     let line_stats = compute_line_stats(&side_by_side);
     let branch = get_current_branch();
 
@@ -121,7 +121,13 @@ pub fn render_diff(
     if is_new_file {
         // Show only the new file panel
         let visible_height = main_area.height.saturating_sub(2) as usize;
-        let new_context = compute_context_lines(&diff.new_content, &diff.filename, scroll as usize, &settings.context, settings.tab_width);
+        let new_context = compute_context_lines(
+            &diff.new_content,
+            &diff.filename,
+            scroll as usize,
+            &settings.context,
+            settings.tab_width,
+        );
         let context_count = new_context.len();
         let content_height = visible_height.saturating_sub(context_count);
 
@@ -145,24 +151,32 @@ pub fn render_diff(
                         .fg(Color::DarkGray)
                         .bg(Color::Rgb(30, 60, 30)),
                 )];
-                spans.extend(highlight_line_spans(text, &diff.filename, Some(Color::Rgb(30, 60, 30))));
+                spans.extend(highlight_line_spans(
+                    text,
+                    &diff.filename,
+                    Some(Color::Rgb(30, 60, 30)),
+                ));
                 new_lines.push(Line::from(spans));
             }
         }
 
-        let new_para = Paragraph::new(new_lines)
-            .scroll((0, h_scroll))
-            .block(
-                Block::default()
-                    .title(" [2] New File ")
-                    .borders(Borders::ALL)
-                    .border_style(diff_title_style.patch(Style::default().fg(Color::Green))),
-            );
+        let new_para = Paragraph::new(new_lines).scroll((0, h_scroll)).block(
+            Block::default()
+                .title(" [2] New File ")
+                .borders(Borders::ALL)
+                .border_style(diff_title_style.patch(Style::default().fg(Color::Green))),
+        );
         frame.render_widget(new_para, main_area);
     } else if is_deleted_file {
         // Show only the old file panel
         let visible_height = main_area.height.saturating_sub(2) as usize;
-        let old_context = compute_context_lines(&diff.old_content, &diff.filename, scroll as usize, &settings.context, settings.tab_width);
+        let old_context = compute_context_lines(
+            &diff.old_content,
+            &diff.filename,
+            scroll as usize,
+            &settings.context,
+            settings.tab_width,
+        );
         let context_count = old_context.len();
         let content_height = visible_height.saturating_sub(context_count);
 
@@ -186,19 +200,21 @@ pub fn render_diff(
                         .fg(Color::DarkGray)
                         .bg(Color::Rgb(60, 30, 30)),
                 )];
-                spans.extend(highlight_line_spans(text, &diff.filename, Some(Color::Rgb(60, 30, 30))));
+                spans.extend(highlight_line_spans(
+                    text,
+                    &diff.filename,
+                    Some(Color::Rgb(60, 30, 30)),
+                ));
                 old_lines.push(Line::from(spans));
             }
         }
 
-        let old_para = Paragraph::new(old_lines)
-            .scroll((0, h_scroll))
-            .block(
-                Block::default()
-                    .title(" [2] Deleted File ")
-                    .borders(Borders::ALL)
-                    .border_style(diff_title_style.patch(Style::default().fg(Color::Red))),
-            );
+        let old_para = Paragraph::new(old_lines).scroll((0, h_scroll)).block(
+            Block::default()
+                .title(" [2] Deleted File ")
+                .borders(Borders::ALL)
+                .border_style(diff_title_style.patch(Style::default().fg(Color::Red))),
+        );
         frame.render_widget(old_para, main_area);
     } else {
         // Standard side-by-side view (or fullscreen mode)
@@ -215,8 +231,20 @@ pub fn render_diff(
         };
 
         // Compute context lines for old and new panels using tree-sitter
-        let old_context = compute_context_lines(&diff.old_content, &diff.filename, scroll as usize, &settings.context, settings.tab_width);
-        let new_context = compute_context_lines(&diff.new_content, &diff.filename, scroll as usize, &settings.context, settings.tab_width);
+        let old_context = compute_context_lines(
+            &diff.old_content,
+            &diff.filename,
+            scroll as usize,
+            &settings.context,
+            settings.tab_width,
+        );
+        let new_context = compute_context_lines(
+            &diff.new_content,
+            &diff.filename,
+            scroll as usize,
+            &settings.context,
+            settings.tab_width,
+        );
         let context_count = old_context.len().max(new_context.len());
 
         let reference_area = old_area.or(new_area).unwrap_or(main_area);
@@ -265,7 +293,8 @@ pub fn render_diff(
                         old_spans.extend(highlight_line_spans(text, &diff.filename, old_bg));
                     }
                     None => {
-                        old_spans.push(Span::styled("     |", Style::default().fg(Color::DarkGray)));
+                        old_spans
+                            .push(Span::styled("     |", Style::default().fg(Color::DarkGray)));
                     }
                 }
                 old_lines.push(Line::from(old_spans));
@@ -285,7 +314,8 @@ pub fn render_diff(
                         new_spans.extend(highlight_line_spans(text, &diff.filename, new_bg));
                     }
                     None => {
-                        new_spans.push(Span::styled("     |", Style::default().fg(Color::DarkGray)));
+                        new_spans
+                            .push(Span::styled("     |", Style::default().fg(Color::DarkGray)));
                     }
                 }
                 new_lines.push(Line::from(new_spans));
@@ -293,26 +323,22 @@ pub fn render_diff(
         }
 
         if let Some(area) = old_area {
-            let old_para = Paragraph::new(old_lines)
-                .scroll((0, h_scroll))
-                .block(
-                    Block::default()
-                        .title(" [2] Old ")
-                        .borders(Borders::ALL)
-                        .border_style(diff_title_style.patch(Style::default().fg(Color::Red))),
-                );
+            let old_para = Paragraph::new(old_lines).scroll((0, h_scroll)).block(
+                Block::default()
+                    .title(" [2] Old ")
+                    .borders(Borders::ALL)
+                    .border_style(diff_title_style.patch(Style::default().fg(Color::Red))),
+            );
             frame.render_widget(old_para, area);
         }
 
         if let Some(area) = new_area {
-            let new_para = Paragraph::new(new_lines)
-                .scroll((0, h_scroll))
-                .block(
-                    Block::default()
-                        .title(" New ")
-                        .borders(Borders::ALL)
-                        .border_style(diff_title_style.patch(Style::default().fg(Color::Green))),
-                );
+            let new_para = Paragraph::new(new_lines).scroll((0, h_scroll)).block(
+                Block::default()
+                    .title(" New ")
+                    .borders(Borders::ALL)
+                    .border_style(diff_title_style.patch(Style::default().fg(Color::Green))),
+            );
             frame.render_widget(new_para, area);
         }
     }
@@ -324,35 +350,55 @@ pub fn render_diff(
     let bg = Color::Rgb(30, 30, 40);
 
     // Left section: branch + filename + viewed + watch
-    let viewed_indicator = if viewed_files.contains(&current_file) { " ✓" } else { "" };
+    let viewed_indicator = if viewed_files.contains(&current_file) {
+        " ✓"
+    } else {
+        ""
+    };
     let left_spans = vec![
         Span::styled(" ", Style::default().bg(bg)),
         Span::styled(
             format!(" {} ", branch),
-            Style::default().fg(Color::Rgb(180, 180, 220)).bg(Color::Rgb(50, 50, 70)),
+            Style::default()
+                .fg(Color::Rgb(180, 180, 220))
+                .bg(Color::Rgb(50, 50, 70)),
         ),
         Span::styled(" ", Style::default().bg(bg)),
-        Span::styled(truncated_filename, Style::default().fg(Color::Rgb(200, 200, 200)).bg(bg)),
+        Span::styled(
+            truncated_filename,
+            Style::default().fg(Color::Rgb(200, 200, 200)).bg(bg),
+        ),
         Span::styled(viewed_indicator, Style::default().fg(Color::Green).bg(bg)),
         Span::styled(watch_indicator, Style::default().fg(Color::Yellow).bg(bg)),
     ];
 
     // Center section: +N -N (X hunks)
     let center_spans = vec![
-        Span::styled(format!("+{}", line_stats.added), Style::default().fg(Color::Rgb(80, 200, 120)).bg(bg)),
-        Span::styled(" ", Style::default().bg(bg)),
-        Span::styled(format!("-{}", line_stats.removed), Style::default().fg(Color::Rgb(240, 80, 80)).bg(bg)),
+        Span::styled(
+            format!("+{}", line_stats.added),
+            Style::default().fg(Color::Rgb(80, 200, 120)).bg(bg),
+        ),
         Span::styled(" ", Style::default().bg(bg)),
         Span::styled(
-            format!("({} {})", hunk_count, if hunk_count == 1 { "hunk" } else { "hunks" }),
+            format!("-{}", line_stats.removed),
+            Style::default().fg(Color::Rgb(240, 80, 80)).bg(bg),
+        ),
+        Span::styled(" ", Style::default().bg(bg)),
+        Span::styled(
+            format!(
+                "({} {})",
+                hunk_count,
+                if hunk_count == 1 { "hunk" } else { "hunks" }
+            ),
             Style::default().fg(Color::Rgb(140, 140, 160)).bg(bg),
         ),
     ];
 
     // Right section: help hint
-    let right_spans = vec![
-        Span::styled(" ? help ", Style::default().fg(Color::Rgb(120, 120, 140)).bg(bg)),
-    ];
+    let right_spans = vec![Span::styled(
+        " ? help ",
+        Style::default().fg(Color::Rgb(120, 120, 140)).bg(bg),
+    )];
 
     let left_line = Line::from(left_spans);
     let center_line = Line::from(center_spans);
@@ -371,9 +417,15 @@ pub fn render_diff(
     let right_padding = footer_width.saturating_sub(center_start + center_len + right_len);
 
     let mut final_spans: Vec<Span> = left_line.spans;
-    final_spans.push(Span::styled(" ".repeat(left_padding), Style::default().bg(bg)));
+    final_spans.push(Span::styled(
+        " ".repeat(left_padding),
+        Style::default().bg(bg),
+    ));
     final_spans.extend(center_line.spans);
-    final_spans.push(Span::styled(" ".repeat(right_padding), Style::default().bg(bg)));
+    final_spans.push(Span::styled(
+        " ".repeat(right_padding),
+        Style::default().bg(bg),
+    ));
     final_spans.extend(right_line.spans);
 
     let footer = Paragraph::new(Line::from(final_spans)).style(Style::default().bg(bg));
@@ -387,7 +439,7 @@ fn render_context_lines(
     filename: &str,
 ) {
     let context_bg = Color::Rgb(40, 40, 50);
-    
+
     for i in 0..total_count {
         if let Some(cl) = context.get(i) {
             let prefix = format!("{:4} ~ ", cl.line_number);
@@ -395,7 +447,11 @@ fn render_context_lines(
                 prefix,
                 Style::default().fg(Color::DarkGray).bg(context_bg),
             )];
-            spans.extend(highlight_line_spans(&cl.content, filename, Some(context_bg)));
+            spans.extend(highlight_line_spans(
+                &cl.content,
+                filename,
+                Some(context_bg),
+            ));
             lines.push(Line::from(spans));
         } else {
             // Empty context line placeholder (when other panel has more context lines)
@@ -423,8 +479,11 @@ fn render_sidebar(
         .iter()
         .enumerate()
         .map(|(i, item)| {
-            let (prefix, status_symbol, status_color, name, is_current_file, is_viewed) = match item {
-                SidebarItem::Directory { name, path, depth, .. } => {
+            let (prefix, status_symbol, status_color, name, is_current_file, is_viewed) = match item
+            {
+                SidebarItem::Directory {
+                    name, path, depth, ..
+                } => {
                     let indent = "  ".repeat(*depth);
                     let all_children_viewed = sidebar_items.iter().all(|child| {
                         if let SidebarItem::File {
@@ -440,7 +499,10 @@ fn render_sidebar(
                         true
                     });
                     let has_children = sidebar_items.iter().any(|child| {
-                        if let SidebarItem::File { path: file_path, .. } = child {
+                        if let SidebarItem::File {
+                            path: file_path, ..
+                        } = child
+                        {
                             file_path.starts_with(&format!("{}/", path))
                         } else {
                             false
@@ -451,7 +513,14 @@ fn render_sidebar(
                     } else {
                         "  "
                     };
-                    (format!("{}{}", indent, marker), "▼".to_string(), None, format!(" {}", name), false, all_children_viewed && has_children)
+                    (
+                        format!("{}{}", indent, marker),
+                        "▼".to_string(),
+                        None,
+                        format!(" {}", name),
+                        false,
+                        all_children_viewed && has_children,
+                    )
                 }
                 SidebarItem::File {
                     name,
@@ -482,13 +551,11 @@ fn render_sidebar(
 
             let is_selected = i == sidebar_selected;
             let base_style = if is_selected {
-                Style::default()
-                    .fg(Color::Black)
-                    .bg(if is_focused {
-                        Color::Cyan
-                    } else {
-                        Color::DarkGray
-                    })
+                Style::default().fg(Color::Black).bg(if is_focused {
+                    Color::Cyan
+                } else {
+                    Color::DarkGray
+                })
             } else if is_current_file {
                 Style::default().fg(Color::Yellow)
             } else if is_viewed {

@@ -1,6 +1,6 @@
 use crate::{
     command::{draft::DraftCommand, explain::ExplainCommand},
-    git_entity::{diff::Diff, GitEntity},
+    git_entity::{GitEntity, diff::Diff},
 };
 use indoc::{formatdoc, indoc};
 use thiserror::Error;
