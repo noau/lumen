@@ -97,10 +97,14 @@ async fn run() -> Result<(), LumenError> {
             log::trace!("Executing List command");
             command.execute(command::CommandType::List).await?
         }
-        Commands::Draft { context } => {
+        Commands::Draft { context, no_cache } => {
             log::trace!("Executing Draft command");
             command
-                .execute(command::CommandType::Draft(context, config.draft))
+                .execute(command::CommandType::Draft {
+                    context,
+                    config: config.draft,
+                    no_cache,
+                })
                 .await?
         }
         Commands::Operate { query } => {

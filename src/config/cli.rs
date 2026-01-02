@@ -96,6 +96,10 @@ pub enum Commands {
         /// Add context to communicate intent
         #[arg(short, long)]
         context: Option<String>,
+
+        /// Do not use cached explanation
+        #[arg(long)]
+        no_cache: bool,
     },
 
     Operate {

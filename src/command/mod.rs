@@ -25,7 +25,11 @@ pub enum CommandType {
         query: Option<String>,
     },
     List,
-    Draft(Option<String>, DraftConfig),
+    Draft {
+        context: Option<String>,
+        config: DraftConfig,
+        no_cache: bool,
+    },
     Operate {
         query: String,
     },
@@ -68,33 +72,41 @@ impl LumenCommand {
                 .execute(&self.provider)
                 .await
             }
-            CommandType::Draft(context, draft_config) => {
+            CommandType::Draft {
+                context,
+                config,
+                no_cache,
+            } => {
                 log::trace!("Dispatching Draft command");
                 let diff = Diff::from_working_tree(true)?;
                 let mut context = context;
                 let mut include_diff = true;
 
-                // Check for cached explanation
-                if let Diff::WorkingTree {
-                    diff: ref diff_content,
-                    ..
-                } = diff
-                {
-                    if let Some(summary) = crate::cache::get_explanation(diff_content) {
-                        log::trace!("Found cached explanation for draft context");
-                        let cached_context =
-                            format!("Previous explanation of these changes:\n{}", summary);
-                        context = match context {
-                            Some(c) => Some(format!("{}\n\n{}", c, cached_context)),
-                            None => Some(cached_context),
-                        };
-                        include_diff = false;
+                // Check for cached explanation if no_cache is false
+                if !no_cache {
+                    if let Diff::WorkingTree {
+                        diff: ref diff_content,
+                        ..
+                    } = diff
+                    {
+                        if let Some(summary) = crate::cache::get_explanation(diff_content) {
+                            log::trace!("Found cached explanation for draft context");
+                            let cached_context =
+                                format!("Previous explanation of these changes:\n{}", summary);
+                            context = match context {
+                                Some(c) => Some(format!("{}\n\n{}", c, cached_context)),
+                                None => Some(cached_context),
+                            };
+                            include_diff = false;
+                        }
                     }
+                } else {
+                    log::trace!("Skipping cache check for draft command");
                 }
 
                 DraftCommand {
                     git_entity: GitEntity::Diff(diff),
-                    draft_config,
+                    draft_config: config,
                     context,
                     include_diff,
                 }
