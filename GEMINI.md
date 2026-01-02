@@ -1,78 +1,62 @@
-# Lumen Project Context
+# GEMINI.md - Lumen Project Context
 
 ## Project Overview
-**Lumen** is a command-line interface (CLI) tool written in Rust that leverages Artificial Intelligence to streamline Git workflows. It assists developers by generating commit messages, visualizing and explaining diffs, and translating natural language queries into Git commands.
+Lumen is an AI-powered command-line tool designed to enhance Git workflows. It leverages various AI providers (primarily Gemini, but also OpenAI, Claude, Groq, and others) to generate commit messages, summarize diffs, explain past commits, and convert natural language queries into Git commands.
 
-## Architecture & Code Structure
-The project follows a standard Rust binary application structure with a modular design:
+### Core Technologies
+- **Language:** Rust (Edition 2024)
+- **CLI Framework:** `clap` (with derive and env features)
+- **Async Runtime:** `tokio`
+- **AI Integration:** `genai` crate (multi-provider support)
+- **Git Interaction:** Standard `git` CLI (via process execution)
+- **UI/UX:** `inquire` for interactive prompts, `fzf` for fuzzy finding, and `mdcat` for terminal markdown rendering.
 
-- **`src/main.rs`**: The entry point of the application. It initializes the configuration, sets up the AI provider, and dispatches the parsed CLI commands.
-- **`src/command/`**: Contains the implementation for each CLI command.
-    - `mod.rs`: Central dispatcher enum `CommandType` and `LumenCommand` struct.
-    - `draft.rs`: Logic for generating commit messages (`lumen draft`).
-    - `explain.rs`: Logic for explaining changes (`lumen explain`).
-    - `operate.rs`: Logic for natural language git operations (`lumen operate`).
-    - `list.rs`: Interactive commit list (`lumen list`).
-    - `configure.rs`: Interactive configuration setup (`lumen configure`).
-- **`src/config/`**: Handles configuration loading and parsing.
-    - `configuration.rs`: Defines the `LumenConfig` struct.
-    - `providers.rs`: AI provider configuration details.
-- **`src/git_entity/`**: Abstractions for Git objects.
-    - `commit.rs`: handling commit data.
-    - `diff.rs`: handling diff generation and parsing.
-- **`src/provider/`**: Interfaces with various AI providers (OpenAI, Claude, Gemini, etc.) via the `genai` crate.
-- **`src/ai_prompt.rs`**: Likely contains the system prompts used to instruct the LLMs.
+### Architecture
+- `src/main.rs`: Entry point and command dispatcher.
+- `src/command/`: Subcommand implementations (`Explain`, `List`, `Draft`, `Operate`, `Configure`).
+- `src/config/`: Configuration management, including provider and API key setup.
+- `src/git_entity/`: Abstractions for Git concepts like Commits and Diffs.
+- `src/provider/`: AI provider abstraction using the `genai` library.
+- `src/ai_prompt.rs`: System and user prompt definitions for AI interactions.
 
-## Development Workflow
+## Building and Running
 
 ### Prerequisites
-- **Rust**: Ensure you have the latest stable version of Rust and Cargo installed (`rustup`).
-- **Git**: The tool relies heavily on local `git` commands.
-- **Optional Tools**:
-    - `fzf`: Required for the `list` command's interactive fuzzy finding.
-    - `mdcat`: Required for rendering Markdown output in the terminal.
+- Rust toolchain (latest stable)
+- `git` installed and in PATH
+- (Optional) `fzf` for the `list` command
+- (Optional) `mdcat` for pretty markdown rendering
 
-### Building and Running
-Use standard Cargo commands to build and run the project:
+### Commands
+- **Build:** `cargo build`
+- **Run:** `cargo run -- <command>`
+- **Test:** `cargo test`
+- **Install:** `cargo install --path .`
 
-```bash
-# Build the project
-cargo build
+### Key CLI Subcommands
+- `lumen configure`: Interactively set up your AI provider and API key.
+- `lumen draft`: Generate a commit message for staged changes.
+- `lumen explain`: Summarize changes in a specific commit or range (e.g., `lumen explain HEAD~1`).
+- `lumen list`: Interactively select a commit from history using `fzf` and explain its changes.
+- `lumen operate "<query>"`: Convert a natural language instruction into a Git command.
 
-# Run the project (pass arguments after --)
-cargo run -- --help
-cargo run -- draft
-cargo run -- explain
-```
+## Development Conventions
+
+### Code Style
+- Follows standard Rust idioms and formatting (`rustfmt`).
+- Uses `thiserror` for error handling and `log` with `env_logger` for tracing.
+- Prompts are managed in `src/ai_prompt.rs` using `indoc` and `formatdoc` for readability.
 
 ### Testing
-Run the test suite to ensure changes don't break existing functionality:
+- Unit tests are located within the modules they test (e.g., `src/commit_reference.rs`, `src/git_entity/commit.rs`).
+- Run tests with `cargo test`.
 
-```bash
-cargo test
-```
+### AI Providers
+Lumen supports a wide range of providers via the `genai` crate:
+- `gemini` (Default/Preferred)
+- `openai`, `claude`, `groq`, `ollama`, `openrouter`, `deepseek`, `xai`, `vercel`.
 
-## Configuration
-Lumen requires configuration to access AI features. The configuration file `lumen.config.json` is looked up in the following order:
-1. CLI arguments.
-2. Custom path via `--config`.
-3. Project root.
-4. Global configuration directory (`~/.config/lumen/` on *nix, `%USERPROFILE%\.config\lumen\` on Windows).
-
-For development, you can create a `lumen.config.json` in the project root:
-
-```json
-{
-  "provider": "openai",
-  "model": "gpt-4o-mini",
-  "api_key": "your-api-key-here"
-}
-```
-
-## Key Dependencies
-- **`clap`**: Command-line argument parsing.
-- **`tokio`**: Asynchronous runtime.
-- **`genai`**: Universal LLM client.
-- **`inquire`**: Interactive terminal prompts.
-- **`spinoff`**: Terminal spinners for loading states.
-- **`serde`**: Serialization and deserialization.
+### Logging
+- Use `--verbose` or `-v` for trace-level logging.
+- Set `RUST_LOG` environment variable for more granular control.
+- Logs can be redirected to a file using `--log-target <path>`.
