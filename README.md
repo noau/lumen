@@ -153,6 +153,12 @@ lumen explain --no-mdcat
 lumen --verbose explain
 lumen --log-target <file-path> --verbose draft
 
+# Disable spinner for clean piping or verbose logs
+lumen --no-spinner explain
+
+# Force fresh draft without using cache
+lumen draft --no-cache
+
 # Open in your favorite editor
 lumen draft | code -      
 
