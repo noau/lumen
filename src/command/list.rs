@@ -8,6 +8,7 @@ use super::{LumenCommand, explain::ExplainCommand};
 
 pub struct ListCommand {
     pub no_mdcat: bool,
+    pub no_spinner: bool,
 }
 
 impl ListCommand {
@@ -20,6 +21,7 @@ impl ListCommand {
             git_entity,
             query: None,
             no_mdcat: self.no_mdcat,
+            no_spinner: self.no_spinner,
         }
         .execute(provider)
         .await

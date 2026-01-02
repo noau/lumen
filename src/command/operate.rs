@@ -1,4 +1,3 @@
-use spinoff::{Color, Spinner, spinners};
 use std::io::{self, Write};
 use thiserror::Error;
 use xml::reader::{EventReader, XmlEvent};
@@ -24,6 +23,7 @@ use super::LumenCommand;
 pub struct OperateCommand {
     pub query: String,
     pub no_mdcat: bool,
+    pub no_spinner: bool,
 }
 
 pub fn extract_operate_response(ai_response: &str) -> Result<OperateResult, ExtractError> {
@@ -162,7 +162,7 @@ impl OperateCommand {
 
         let spinner_text = "Generating answer...".to_string();
 
-        let mut spinner = Spinner::new(spinners::Dots, spinner_text, Color::Blue);
+        let spinner = super::LumenSpinner::new(spinner_text, self.no_spinner);
         let result = provider.operate(self).await?;
         log::trace!("Received AI response for operate");
         let operate_result = extract_operate_response(&result).map_err(|e| {

@@ -25,6 +25,10 @@ pub struct Cli {
     #[arg(long, global = true)]
     pub no_mdcat: bool,
 
+    /// Disable spinner
+    #[arg(long, global = true)]
+    pub no_spinner: bool,
+
     /// Enable verbose logging
     #[arg(short, long, global = true)]
     pub verbose: bool,

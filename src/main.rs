@@ -59,7 +59,7 @@ async fn run() -> Result<(), LumenError> {
     )?;
     log::trace!("Provider initialized");
 
-    let command = command::LumenCommand::new(provider, cli.no_mdcat);
+    let command = command::LumenCommand::new(provider, cli.no_mdcat, cli.no_spinner);
 
     match cli.command {
         Commands::Explain {

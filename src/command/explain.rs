@@ -1,5 +1,3 @@
-use spinoff::{Color, Spinner, spinners};
-
 use crate::{
     error::LumenError,
     git_entity::{GitEntity, diff::Diff},
@@ -12,6 +10,7 @@ pub struct ExplainCommand {
     pub git_entity: GitEntity,
     pub query: Option<String>,
     pub no_mdcat: bool,
+    pub no_spinner: bool,
 }
 
 impl ExplainCommand {
@@ -31,7 +30,7 @@ impl ExplainCommand {
             None => "Generating summary...".to_string(),
         };
 
-        let mut spinner = Spinner::new(spinners::Dots, spinner_text, Color::Blue);
+        let spinner = super::LumenSpinner::new(spinner_text, self.no_spinner);
         let result = provider.explain(self).await?;
 
         // Cache the result if it's a working tree diff

@@ -2,7 +2,8 @@ use draft::DraftCommand;
 use explain::ExplainCommand;
 use list::ListCommand;
 use operate::OperateCommand;
-use std::io::Write;
+use spinoff::{Color, Spinner, spinners};
+use std::io::{IsTerminal, Write};
 use std::process::Stdio;
 
 use crate::config::configuration::DraftConfig;
@@ -33,11 +34,16 @@ pub enum CommandType {
 pub struct LumenCommand {
     provider: LumenProvider,
     no_mdcat: bool,
+    no_spinner: bool,
 }
 
 impl LumenCommand {
-    pub fn new(provider: LumenProvider, no_mdcat: bool) -> Self {
-        LumenCommand { provider, no_mdcat }
+    pub fn new(provider: LumenProvider, no_mdcat: bool, no_spinner: bool) -> Self {
+        LumenCommand {
+            provider,
+            no_mdcat,
+            no_spinner,
+        }
     }
 
     pub async fn execute(&self, command_type: CommandType) -> Result<(), LumenError> {
@@ -48,6 +54,7 @@ impl LumenCommand {
                     git_entity,
                     query,
                     no_mdcat: self.no_mdcat,
+                    no_spinner: self.no_spinner,
                 }
                 .execute(&self.provider)
                 .await
@@ -56,6 +63,7 @@ impl LumenCommand {
                 log::trace!("Dispatching List command");
                 ListCommand {
                     no_mdcat: self.no_mdcat,
+                    no_spinner: self.no_spinner,
                 }
                 .execute(&self.provider)
                 .await
@@ -98,6 +106,7 @@ impl LumenCommand {
                 OperateCommand {
                     query,
                     no_mdcat: self.no_mdcat,
+                    no_spinner: self.no_spinner,
                 }
                 .execute(&self.provider)
                 .await
@@ -206,5 +215,36 @@ impl LumenCommand {
             return Err(LumenError::CommandError("Aborted".to_string()));
         }
         LumenCommand::execute_bash_command(command)
+    }
+}
+
+pub struct LumenSpinner {
+    inner: Option<Spinner>,
+}
+
+impl LumenSpinner {
+    pub fn new(text: String, no_spinner: bool) -> Self {
+        let is_terminal = std::io::stdout().is_terminal();
+        let is_verbose = log::log_enabled!(log::Level::Trace);
+
+        if no_spinner || !is_terminal || is_verbose {
+            log::trace!(
+                "Spinner disabled (no_spinner: {}, is_terminal: {}, is_verbose: {})",
+                no_spinner,
+                is_terminal,
+                is_verbose
+            );
+            return Self { inner: None };
+        }
+
+        Self {
+            inner: Some(Spinner::new(spinners::Dots, text, Color::Blue)),
+        }
+    }
+
+    pub fn success(self, message: &str) {
+        if let Some(mut spinner) = self.inner {
+            spinner.success(message);
+        }
     }
 }
